@@ -1,6 +1,6 @@
-# FleetFlow TMS
+# Transportation Management System
 
-A focused Transportation Management System demo for a single fleet operator. It supports route quoting, compliant vehicle reservation, driver dispatch, delivery confirmation, invoicing, and secure transport documents.
+A focused Transportation Management System for a single fleet operator. It supports route quoting, compliant vehicle reservation, driver dispatch, delivery confirmation, invoicing, and secure transport documents.
 
 ## Features
 
@@ -58,6 +58,4 @@ cd server && npm run build && npm run test:fare
 cd ../client && npm run build
 ```
 
-## Intentional demo scope
 
-Multi-tenancy, bidding, payments, GPS tracking, notifications, and mobile apps are intentionally out of scope.
