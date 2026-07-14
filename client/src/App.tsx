@@ -1,4 +1,10 @@
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,7 +21,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-type User = { id: string; name: string; role: "ADMIN" | "CUSTOMER" | "DRIVER" };
+type Role = "ADMIN" | "CUSTOMER" | "DRIVER";
+type VehicleStatus =
+  | "AVAILABLE"
+  | "RESERVED"
+  | "ON_TRIP"
+  | "MAINTENANCE"
+  | "BREAKDOWN";
+type BookingStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "IN_TRANSIT"
+  | "DELIVERED"
+  | "INVOICED"
+  | "CLOSED"
+  | "CANCELLED";
+type User = { id: string; name: string; role: Role };
 type Location = { id: string; cityName: string };
 type Quote = {
   route: { distanceKm: number; tollAmount: number };
@@ -35,6 +56,82 @@ type Quote = {
     };
   }>;
 };
+type AuthSession = {
+  user: User;
+  accessToken: string;
+  refreshToken: string;
+};
+type Booking = {
+  id: string;
+  status: BookingStatus;
+  materialDescription: string;
+  estimatedFare: number | string;
+  lrPdfUrl: string | null;
+  invoicePdfUrl: string | null;
+  customer: Pick<User, "name">;
+  vehicle: { regNumber: string };
+  fromLocation: Location;
+  toLocation: Location;
+};
+type Driver = {
+  id: string;
+  name: string;
+  licenseNumber: string | null;
+  licenseExpiry: string | null;
+};
+type Dashboard = {
+  vehicles: Array<{ status: VehicleStatus; _count: number }>;
+  revenueThisMonth: number;
+  expiringDocuments: Array<{
+    id: string;
+    regNumber: string;
+    rcExpiry: string;
+    permitExpiry: string;
+  }>;
+  recentBookings: Booking[];
+};
+type WorkspaceData =
+  | { role: "CUSTOMER"; locations: Location[]; bookings: Booking[] }
+  | { role: "DRIVER"; bookings: Booking[] }
+  | { role: "ADMIN"; dashboard: Dashboard };
+type ApiRequest = <ResponseBody>(
+  path: string,
+  options?: RequestInit,
+) => Promise<ResponseBody>;
+type Report = (message: string) => void;
+type AuthFormValues = z.infer<typeof authSchema>;
+type BookingFormInput = z.input<typeof bookingSchema>;
+type BookingFormValues = z.infer<typeof bookingSchema>;
+
+function isUser(value: unknown): value is User {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.id === "string" &&
+    typeof candidate.name === "string" &&
+    (candidate.role === "ADMIN" ||
+      candidate.role === "CUSTOMER" ||
+      candidate.role === "DRIVER")
+  );
+}
+
+function storedUser(): User | null {
+  const rawUser = localStorage.getItem("tms-user");
+  if (!rawUser) return null;
+
+  try {
+    const parsed: unknown = JSON.parse(rawUser);
+    return isUser(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function errorMessage(body: unknown): string | null {
+  if (!body || typeof body !== "object" || !("message" in body)) return null;
+  const message = (body as { message: unknown }).message;
+  return typeof message === "string" ? message : null;
+}
 const authSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -62,53 +159,104 @@ const currency = (value: number) =>
   }).format(value);
 
 function App() {
-  const [user, setUser] = useState<User | null>(() =>
-    JSON.parse(localStorage.getItem("tms-user") || "null"),
-  );
+  const [user, setUser] = useState<User | null>(storedUser);
   const [accessToken, setAccessToken] = useState(
     () => localStorage.getItem("tms-access") || "",
   );
   const [locations, setLocations] = useState<Location[]>([]);
   const [quote, setQuote] = useState<Quote | null>(null);
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [dashboard, setDashboard] = useState<any>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [message, setMessage] = useState("");
 
-  async function request(path: string, options: RequestInit = {}) {
-    const response = await fetch(`${API}${path}`, {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        ...options.headers,
-      },
-    });
-    const body = response.status === 204 ? null : await response.json();
-    if (!response.ok) throw new Error(body?.message || "Something went wrong");
-    return body;
-  }
+  const request = useCallback<ApiRequest>(
+    async <ResponseBody,>(path: string, options: RequestInit = {}) => {
+      const headers = new Headers(options.headers);
+      headers.set("Content-Type", "application/json");
+      if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
 
-  async function loadWorkspace() {
-    if (!user) return;
-    try {
+      const response = await fetch(`${API}${path}`, { ...options, headers });
+      const contentType = response.headers.get("content-type") || "";
+      const body: unknown =
+        response.status === 204
+          ? null
+          : contentType.includes("application/json")
+            ? await response.json()
+            : await response.text();
+      if (!response.ok)
+        throw new Error(errorMessage(body) || "Something went wrong");
+      return body as ResponseBody;
+    },
+    [accessToken],
+  );
+
+  const fetchWorkspace = useCallback(
+    async (signal?: AbortSignal): Promise<WorkspaceData | null> => {
+      if (!user) return null;
       if (user.role === "CUSTOMER") {
-        setLocations(await request("/locations"));
-        setBookings(await request("/bookings/mine"));
+        const [locationData, bookingData] = await Promise.all([
+          request<Location[]>("/locations", { signal }),
+          request<Booking[]>("/bookings/mine", { signal }),
+        ]);
+        return {
+          role: "CUSTOMER",
+          locations: locationData,
+          bookings: bookingData,
+        };
       }
-      if (user.role === "DRIVER") setBookings(await request("/bookings/mine"));
-      if (user.role === "ADMIN")
-        setDashboard(await request("/admin/dashboard"));
-    } catch (error) {
-      setMessage(
-        error instanceof Error ? error.message : "Unable to load workspace",
-      );
-    }
-  }
-  useEffect(() => {
-    loadWorkspace();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+      if (user.role === "DRIVER")
+        return {
+          role: "DRIVER",
+          bookings: await request<Booking[]>("/bookings/mine", { signal }),
+        };
+      return {
+        role: "ADMIN",
+        dashboard: await request<Dashboard>("/admin/dashboard", { signal }),
+      };
+    },
+    [request, user],
+  );
 
-  function saveSession(payload: any) {
+  const applyWorkspace = useCallback((workspace: WorkspaceData) => {
+    if (workspace.role === "CUSTOMER") {
+      setLocations(workspace.locations);
+      setBookings(workspace.bookings);
+    }
+    if (workspace.role === "DRIVER") setBookings(workspace.bookings);
+    if (workspace.role === "ADMIN") setDashboard(workspace.dashboard);
+  }, []);
+
+  const loadWorkspace = useCallback(
+    async (signal?: AbortSignal) => {
+      try {
+        const workspace = await fetchWorkspace(signal);
+        if (!signal?.aborted && workspace) applyWorkspace(workspace);
+      } catch (error) {
+        if (signal?.aborted) return;
+        setMessage(
+          error instanceof Error ? error.message : "Unable to load workspace",
+        );
+      }
+    },
+    [applyWorkspace, fetchWorkspace],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchWorkspace(controller.signal)
+      .then((workspace) => {
+        if (!controller.signal.aborted && workspace) applyWorkspace(workspace);
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted)
+          setMessage(
+            error instanceof Error ? error.message : "Unable to load workspace",
+          );
+      });
+    return () => controller.abort();
+  }, [applyWorkspace, fetchWorkspace]);
+
+  function saveSession(payload: AuthSession) {
     localStorage.setItem("tms-user", JSON.stringify(payload.user));
     localStorage.setItem("tms-access", payload.accessToken);
     localStorage.setItem("tms-refresh", payload.refreshToken);
@@ -117,7 +265,9 @@ function App() {
     setMessage(`Welcome, ${payload.user.name}`);
   }
   function signOut() {
-    localStorage.clear();
+    localStorage.removeItem("tms-user");
+    localStorage.removeItem("tms-access");
+    localStorage.removeItem("tms-refresh");
     setUser(null);
     setAccessToken("");
     setQuote(null);
@@ -195,15 +345,26 @@ function App() {
   );
 }
 
-function AuthScreen({ onAuthenticated, report, message, request }: any) {
+function AuthScreen({
+  onAuthenticated,
+  report,
+  message,
+  request,
+}: {
+  onAuthenticated: (payload: AuthSession) => void;
+  report: Report;
+  message: string;
+  request: ApiRequest;
+}) {
   const [registering, setRegistering] = useState(false);
-  const form = useForm({
+  const form = useForm<AuthFormValues>({
     resolver: zodResolver(authSchema),
     defaultValues: { email: "", password: "", name: "", phone: "" },
   });
-  async function submit(values: any) {
+  async function submit(values: AuthFormValues) {
+    console.log("SUBMIT FIRED", values); // debug log to check if submit is firing
     try {
-      const payload = await request(
+      const payload = await request<AuthSession>(
         registering ? "/auth/register" : "/auth/login",
         {
           method: "POST",
@@ -259,7 +420,11 @@ function AuthScreen({ onAuthenticated, report, message, request }: any) {
             >
               <Input type="password" {...form.register("password")} />
             </Field>
-            <Button className="w-full" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting
                 ? "Please wait..."
                 : registering
@@ -290,8 +455,16 @@ function CustomerWorkspace({
   onBooked,
   report,
   bookings,
-}: any) {
-  const form = useForm({
+}: {
+  locations: Location[];
+  quote: Quote | null;
+  setQuote: (quote: Quote | null) => void;
+  request: ApiRequest;
+  onBooked: () => Promise<void>;
+  report: Report;
+  bookings: Booking[];
+}) {
+  const form = useForm<BookingFormInput, unknown, BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
       fromLocationId: "",
@@ -310,7 +483,7 @@ function CustomerWorkspace({
     try {
       const { fromLocationId, toLocationId } = form.getValues();
       setQuote(
-        await request(
+        await request<Quote>(
           `/quotes?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}`,
         ),
       );
@@ -318,9 +491,9 @@ function CustomerWorkspace({
       report(error instanceof Error ? error.message : "Unable to quote route");
     }
   };
-  const submit = async (values: any) => {
+  const submit = async (values: BookingFormValues) => {
     try {
-      await request("/bookings", {
+      await request<Booking>("/bookings", {
         method: "POST",
         body: JSON.stringify({
           ...values,
@@ -383,7 +556,7 @@ function CustomerWorkspace({
                     {currency(quote.route.tollAmount)}
                   </div>
                   <div className="grid gap-3">
-                    {quote.options.map((option: any) => (
+                    {quote.options.map((option) => (
                       <label
                         key={option.vehicle.id}
                         className="flex cursor-pointer items-center justify-between rounded-lg border p-4 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50"
@@ -455,9 +628,19 @@ function CustomerWorkspace({
   );
 }
 
-function AdminWorkspace({ dashboard, request, report, refresh }: any) {
-  const statusMap = Object.fromEntries(
-    (dashboard?.vehicles || []).map((item: any) => [item.status, item._count]),
+function AdminWorkspace({
+  dashboard,
+  request,
+  report,
+  refresh,
+}: {
+  dashboard: Dashboard | null;
+  request: ApiRequest;
+  report: Report;
+  refresh: () => Promise<void>;
+}) {
+  const statusMap = new Map(
+    dashboard?.vehicles.map(({ status, _count }) => [status, _count]),
   );
   return (
     <div className="space-y-7">
@@ -469,9 +652,9 @@ function AdminWorkspace({ dashboard, request, report, refresh }: any) {
       </section>
       <div className="grid gap-4 sm:grid-cols-4">
         {[
-          ["Available", statusMap.AVAILABLE || 0],
-          ["Reserved", statusMap.RESERVED || 0],
-          ["On trip", statusMap.ON_TRIP || 0],
+          ["Available", statusMap.get("AVAILABLE") || 0],
+          ["Reserved", statusMap.get("RESERVED") || 0],
+          ["On trip", statusMap.get("ON_TRIP") || 0],
           ["Revenue this month", currency(dashboard?.revenueThisMonth || 0)],
         ].map(([label, value]) => (
           <Card key={label}>
@@ -490,7 +673,7 @@ function AdminWorkspace({ dashboard, request, report, refresh }: any) {
           </CardHeader>
           <CardContent className="space-y-2">
             {dashboard?.expiringDocuments?.length ? (
-              dashboard.expiringDocuments.map((item: any) => (
+              dashboard.expiringDocuments.map((item) => (
                 <p key={item.id} className="rounded bg-amber-50 p-3 text-sm">
                   {item.regNumber} · RC{" "}
                   {new Date(item.rcExpiry).toLocaleDateString()} · Permit{" "}
@@ -515,30 +698,59 @@ function AdminWorkspace({ dashboard, request, report, refresh }: any) {
   );
 }
 
-function AdminBookings({ bookings, request, report, refresh }: any) {
-  const [drivers, setDrivers] = useState<any[]>([]);
+function AdminBookings({
+  bookings,
+  request,
+  report,
+  refresh,
+}: {
+  bookings: Booking[];
+  request: ApiRequest;
+  report: Report;
+  refresh: () => Promise<void>;
+}) {
+  const [drivers, setDrivers] = useState<Driver[]>([]);
   useEffect(() => {
-    request("/admin/drivers")
-      .then(setDrivers)
-      .catch(() => {});
-  }, []);
-  const act = async (id: string, action: string) => {
+    let isCurrent = true;
+    void request<Driver[]>("/admin/drivers")
+      .then((driverData) => {
+        if (isCurrent) setDrivers(driverData);
+      })
+      .catch((error: unknown) => {
+        if (isCurrent)
+          report(
+            error instanceof Error ? error.message : "Unable to load drivers",
+          );
+      });
+    return () => {
+      isCurrent = false;
+    };
+  }, [report, request]);
+
+  const act = async (
+    id: string,
+    action: "confirm" | "depart" | "close",
+  ) => {
     try {
       const driverId = drivers[0]?.id;
       if (action === "confirm" && !driverId)
         throw new Error("Add a compliant driver first");
-      await request(`/admin/bookings/${id}/${action}`, {
+      await request<Booking>(`/admin/bookings/${id}/${action}`, {
         method: "POST",
         body: JSON.stringify(
           action === "confirm"
             ? { driverId }
-            : action === "cancel"
-              ? { reason: "Cancelled by dispatcher" }
-              : {},
+            : {},
         ),
       });
-      report(`Booking ${action}ed`);
-      refresh();
+      report(
+        `Booking ${{
+          confirm: "confirmed",
+          depart: "departed",
+          close: "closed",
+        }[action]}`,
+      );
+      await refresh();
     } catch (error) {
       report(error instanceof Error ? error.message : "Action failed");
     }
@@ -549,7 +761,7 @@ function AdminBookings({ bookings, request, report, refresh }: any) {
         <CardTitle>Recent bookings</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {bookings.map((booking: any) => (
+        {bookings.map((booking) => (
           <div key={booking.id} className="rounded border p-3 text-sm">
             <div className="flex justify-between">
               <b>
@@ -584,11 +796,21 @@ function AdminBookings({ bookings, request, report, refresh }: any) {
   );
 }
 
-function DriverWorkspace({ bookings, request, report, refresh }: any) {
+function DriverWorkspace({
+  bookings,
+  request,
+  report,
+  refresh,
+}: {
+  bookings: Booking[];
+  request: ApiRequest;
+  report: Report;
+  refresh: () => Promise<void>;
+}) {
   const [notes, setNotes] = useState("");
   const deliver = async (id: string) => {
     try {
-      await request(`/driver/bookings/${id}/deliver`, {
+      await request<Booking>(`/driver/bookings/${id}/deliver`, {
         method: "POST",
         body: JSON.stringify({ notes }),
       });
@@ -609,7 +831,7 @@ function DriverWorkspace({ bookings, request, report, refresh }: any) {
         </p>
         <h1 className="mt-2 text-3xl font-bold">Assigned trips</h1>
       </section>
-      {bookings.map((booking: any) => (
+      {bookings.map((booking) => (
         <Card key={booking.id}>
           <CardHeader>
             <CardTitle>
@@ -641,10 +863,20 @@ function DriverWorkspace({ bookings, request, report, refresh }: any) {
   );
 }
 
-function BookingList({ bookings, request, report }: any) {
-  const documentUrl = async (id: string, kind: string) => {
+function BookingList({
+  bookings,
+  request,
+  report,
+}: {
+  bookings: Booking[];
+  request: ApiRequest;
+  report: Report;
+}) {
+  const documentUrl = async (id: string, kind: "lr" | "invoice") => {
     try {
-      const { url } = await request(`/bookings/${id}/documents/${kind}`);
+      const { url } = await request<{ url: string }>(
+        `/bookings/${id}/documents/${kind}`,
+      );
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (error) {
       report(error instanceof Error ? error.message : "Document unavailable");
@@ -660,7 +892,7 @@ function BookingList({ bookings, request, report }: any) {
       </CardHeader>
       <CardContent className="space-y-3">
         {bookings.length ? (
-          bookings.map((booking: any) => (
+          bookings.map((booking) => (
             <div key={booking.id} className="rounded-lg border p-3 text-sm">
               <div className="flex justify-between">
                 <b>
@@ -702,7 +934,15 @@ function BookingList({ bookings, request, report }: any) {
     </Card>
   );
 }
-function Field({ label, error, children }: any) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: ReactNode;
+}) {
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
@@ -711,7 +951,11 @@ function Field({ label, error, children }: any) {
     </div>
   );
 }
-function SelectField({ label, locations, ...props }: any) {
+function SelectField({
+  label,
+  locations,
+  ...props
+}: { label: string; locations: Location[] } & ComponentPropsWithoutRef<"select">) {
   return (
     <Field label={label}>
       <select

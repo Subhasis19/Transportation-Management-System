@@ -66,11 +66,12 @@ app.post(
         password: z.string().min(8).max(72),
       })
       .parse(req.body);
+    const { password, ...profile } = input;
     const user = await prisma.user.create({
       data: {
-        ...input,
-        email: input.email.toLowerCase(),
-        passwordHash: await bcrypt.hash(input.password, 12),
+        ...profile,
+        email: profile.email.toLowerCase(),
+        passwordHash: await bcrypt.hash(password, 12),
         role: Role.CUSTOMER,
       },
     });
