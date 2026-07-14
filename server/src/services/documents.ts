@@ -9,7 +9,7 @@ function renderPdf(title: string, rows: Array<[string, string]>) {
     doc.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
-    doc.fontSize(20).text("FleetFlow TMS", { align: "center" });
+    doc.fontSize(20).text("TruckLine TMS", { align: "center" });
     doc.moveDown().fontSize(16).text(title).moveDown();
     rows.forEach(([label, value]) => doc.fontSize(10).fillColor("#475569").text(label).fillColor("#0f172a").fontSize(12).text(value).moveDown(0.5));
     doc.end();

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ModeToggle } from "@/components/mode-toggle";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 type Role = "ADMIN" | "CUSTOMER" | "DRIVER";
@@ -285,22 +286,23 @@ function App() {
       />
     );
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-950">
-      <header className="border-b bg-white">
+    <main className="min-h-screen bg-background text-foreground">
+      <header className="border-b bg-background">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
             <p className="font-heading text-xl font-semibold tracking-wide">
-              FLEETFLOW
+              TRUCKLINE
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               Transportation management, made clear
             </p>
           </div>
           <div className="flex items-center gap-3">
             <Badge variant="secondary">{user.role}</Badge>
-            <span className="hidden text-sm text-slate-600 sm:block">
+            <span className="hidden text-sm text-muted-foreground sm:block">
               {user.name}
             </span>
+            <ModeToggle />
             <Button variant="outline" size="sm" onClick={signOut}>
               Sign out
             </Button>
@@ -309,7 +311,7 @@ function App() {
       </header>
       <div className="mx-auto max-w-6xl px-6 py-8">
         {message && (
-          <p className="mb-5 rounded-md bg-indigo-50 px-4 py-3 text-sm text-indigo-800">
+          <p className="mb-5 rounded-md bg-primary/10 px-4 py-3 text-sm text-primary">
             {message}
           </p>
         )}
@@ -381,10 +383,13 @@ function AuthScreen({
     }
   }
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-950 p-6">
-      <Card className="w-full max-w-md border-slate-700 bg-white">
+    <main className="relative grid min-h-screen place-items-center bg-background p-6">
+      <div className="absolute top-6 right-6">
+        <ModeToggle />
+      </div>
+      <Card className="w-full max-w-md">
         <CardHeader>
-          <p className="font-heading text-sm font-semibold text-indigo-600">
+          <p className="font-heading text-sm font-semibold text-primary">
             Transportation Management System
           </p>
           <CardTitle>
@@ -433,14 +438,14 @@ function AuthScreen({
             </Button>
           </form>
           <button
-            className="mt-4 w-full text-sm text-indigo-700 underline"
+            className="mt-4 w-full text-sm text-primary underline"
             onClick={() => setRegistering(!registering)}
           >
             {registering
               ? "Already have an account? Sign in"
               : "New customer? Create an account"}
           </button>
-          {message && <p className="mt-4 text-sm text-rose-600">{message}</p>}
+          {message && <p className="mt-4 text-sm text-destructive">{message}</p>}
         </CardContent>
       </Card>
     </main>

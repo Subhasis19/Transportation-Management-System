@@ -49,7 +49,7 @@ const bookingInclude = {
 } as const;
 
 app.get("/health", (_req, res) =>
-  res.json({ success: true, message: "FleetFlow API is running" }),
+  res.json({ success: true, message: "TruckLine API is running" }),
 );
 
 app.post(
