@@ -1,3 +1,4 @@
+import { env } from "./config/env";
 import express, {
   type NextFunction,
   type Request,
@@ -23,7 +24,12 @@ import { calculateFare } from "./services/fare";
 
 const app = express();
 app.use(helmet());
-app.use(cors({ origin: process.env.FRONTEND_URL || "http://localhost:5173" }));
+app.use(
+  cors({
+    origin: env.FRONTEND_URL,
+    credentials: true,
+  }),
+);
 app.use(express.json());
 
 const vehicleTypes = [
