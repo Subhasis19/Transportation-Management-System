@@ -1,25 +1,45 @@
-import { env } from "./config/env";
-import express, {
-  type NextFunction,
-  type Request,
-  type Response,
-} from "express";
+import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import bcrypt from "bcrypt";
 import { z } from "zod";
-import { BookingStatus, Role, VehicleStatus } from "./generated/prisma/client";
+
+import { env } from "./config/env";
+
+import { 
+  BookingStatus,
+  Role, 
+  VehicleStatus 
+} from "./generated/prisma/client";
+
+import {
+  moneySchema,
+  positiveMoneySchema,
+  uuidSchema,
+} from "./common/schemas/common.schema";
+
+import { asyncHandler } from "./middleware/async-handler";
+import { errorHandler } from "./middleware/error-handler";
+import { notFoundHandler } from "./middleware/not-found";
+
 import {
   allow,
   authenticate,
   issueRefreshToken,
   rotateRefreshToken,
   signAccessToken,
-  type AuthRequest,
 } from "./lib/auth";
+
 import { prisma } from "./lib/prisma";
 import { signedDocumentUrl } from "./lib/storage";
-import { createInvoice, createLorryReceipt } from "./services/documents";
+
+
+import { 
+  createInvoice, 
+  createLorryReceipt 
+} from "./services/documents";
+
+
 import { calculateFare } from "./services/fare";
 
 const app = express();
@@ -38,12 +58,7 @@ const vehicleTypes = [
   "MEDIUM_TRUCK",
   "HEAVY_TRUCK",
 ] as const;
-const id = z.string().uuid();
-const money = z.coerce.number().finite().min(0).max(99_999_999);
-const asyncRoute =
-  (handler: (req: AuthRequest, res: Response) => Promise<void>) =>
-  (req: Request, res: Response, next: NextFunction) =>
-    handler(req as AuthRequest, res).catch(next);
+
 const isCompliant = (vehicle: { rcExpiry: Date; permitExpiry: Date }) =>
   vehicle.rcExpiry > new Date() && vehicle.permitExpiry > new Date();
 const bookingInclude = {
@@ -60,7 +75,7 @@ app.get("/health", (_req, res) =>
 
 app.post(
   "/auth/register",
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const input = z
       .object({
         name: z.string().trim().min(2).max(100),
@@ -82,19 +97,17 @@ app.post(
       },
     });
     const authUser = { id: user.id, role: user.role, email: user.email };
-    res
-      .status(201)
-      .json({
-        user: { id: user.id, name: user.name, role: user.role },
-        accessToken: signAccessToken(authUser),
-        refreshToken: await issueRefreshToken(user.id),
-      });
+    res.status(201).json({
+      user: { id: user.id, name: user.name, role: user.role },
+      accessToken: signAccessToken(authUser),
+      refreshToken: await issueRefreshToken(user.id),
+    });
   }),
 );
 
 app.post(
   "/auth/login",
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const input = z
       .object({ email: z.string().email(), password: z.string().min(1) })
       .parse(req.body);
@@ -123,7 +136,7 @@ app.post(
 
 app.post(
   "/auth/refresh",
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const refreshToken = z
       .object({ refreshToken: z.string().min(1) })
       .parse(req.body).refreshToken;
@@ -134,7 +147,7 @@ app.post(
 app.post(
   "/auth/logout",
   authenticate,
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const raw = z
       .object({ refreshToken: z.string().min(1) })
       .parse(req.body).refreshToken;
@@ -156,7 +169,7 @@ app.post(
 app.get(
   "/locations",
   authenticate,
-  asyncRoute(async (_req, res) => {
+  asyncHandler(async (_req, res) => {
     res.json(await prisma.location.findMany({ orderBy: { cityName: "asc" } }));
   }),
 );
@@ -164,9 +177,9 @@ app.get(
 app.get(
   "/quotes",
   authenticate,
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const query = z
-      .object({ fromLocationId: id, toLocationId: id })
+      .object({ fromLocationId: uuidSchema, toLocationId: uuidSchema })
       .parse(req.query);
     if (query.fromLocationId === query.toLocationId) {
       res.status(400).json({ message: "Origin and destination must differ" });
@@ -217,12 +230,12 @@ app.post(
   "/bookings",
   authenticate,
   allow(Role.CUSTOMER),
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const input = z
       .object({
-        vehicleId: id,
-        fromLocationId: id,
-        toLocationId: id,
+        vehicleId: uuidSchema,
+        fromLocationId: uuidSchema,
+        toLocationId: uuidSchema,
         pickupAt: z.coerce
           .date()
           .refine((date) => date > new Date(), "Pickup must be in the future"),
@@ -230,8 +243,8 @@ app.post(
         consignorName: z.string().trim().min(2).max(150),
         consigneeName: z.string().trim().min(2).max(150),
         materialDescription: z.string().trim().min(2).max(255),
-        weightKg: money.positive(),
-        declaredValue: money.positive(),
+        weightKg: positiveMoneySchema,
+        declaredValue: positiveMoneySchema,
       })
       .parse(req.body);
     const booking = await prisma.$transaction(async (tx) => {
@@ -289,7 +302,7 @@ app.post(
 app.get(
   "/bookings/mine",
   authenticate,
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const where =
       req.user!.role === Role.CUSTOMER
         ? { customerId: req.user!.id }
@@ -310,7 +323,7 @@ app.get(
   "/admin/dashboard",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (_req, res) => {
+  asyncHandler(async (_req, res) => {
     const [vehicles, bookings, revenue, expiringDocuments, recentBookings] =
       await Promise.all([
         prisma.vehicle.groupBy({ by: ["status"], _count: true }),
@@ -358,7 +371,7 @@ app.get(
   "/admin/drivers",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (_req, res) => {
+  asyncHandler(async (_req, res) => {
     res.json(
       await prisma.user.findMany({
         where: { role: Role.DRIVER, isActive: true },
@@ -377,7 +390,7 @@ app.post(
   "/admin/locations",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const cityName = z
       .object({ cityName: z.string().trim().min(2).max(100) })
       .parse(req.body).cityName;
@@ -388,7 +401,7 @@ app.get(
   "/admin/routes",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (_req, res) => {
+  asyncHandler(async (_req, res) => {
     res.json(
       await prisma.route.findMany({
         include: { fromLocation: true, toLocation: true },
@@ -401,36 +414,34 @@ app.post(
   "/admin/routes",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const input = z
       .object({
-        fromLocationId: id,
-        toLocationId: id,
+        fromLocationId: uuidSchema,
+        toLocationId: uuidSchema,
         distanceKm: z.coerce.number().positive().max(99_999),
-        tollAmount: money,
+        tollAmount: moneySchema,
       })
       .parse(req.body);
     if (input.fromLocationId === input.toLocationId) {
       res.status(400).json({ message: "Origin and destination must differ" });
       return;
     }
-    res
-      .status(201)
-      .json(
-        await prisma.route.upsert({
-          where: {
-            fromLocationId_toLocationId: {
-              fromLocationId: input.fromLocationId,
-              toLocationId: input.toLocationId,
-            },
+    res.status(201).json(
+      await prisma.route.upsert({
+        where: {
+          fromLocationId_toLocationId: {
+            fromLocationId: input.fromLocationId,
+            toLocationId: input.toLocationId,
           },
-          update: {
-            distanceKm: input.distanceKm,
-            tollAmount: input.tollAmount,
-          },
-          create: input,
-        }),
-      );
+        },
+        update: {
+          distanceKm: input.distanceKm,
+          tollAmount: input.tollAmount,
+        },
+        create: input,
+      }),
+    );
   }),
 );
 
@@ -438,7 +449,7 @@ app.get(
   "/admin/vehicles",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (_req, res) => {
+  asyncHandler(async (_req, res) => {
     res.json(
       await prisma.vehicle.findMany({
         include: { rateCard: true },
@@ -451,12 +462,12 @@ app.post(
   "/admin/vehicles",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const input = z
       .object({
         regNumber: z.string().trim().min(4).max(20),
         vehicleType: z.enum(vehicleTypes),
-        capacityKg: money.positive(),
+        capacityKg: positiveMoneySchema,
         rcNumber: z.string().trim().min(3).max(50),
         rcExpiry: z.coerce.date(),
         permitNumber: z.string().trim().min(3).max(50),
@@ -470,7 +481,7 @@ app.patch(
   "/admin/vehicles/:id",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const input = z
       .object({
         status: z.nativeEnum(VehicleStatus).optional(),
@@ -480,7 +491,7 @@ app.patch(
       .parse(req.body);
     res.json(
       await prisma.vehicle.update({
-        where: { id: id.parse(req.params.id) },
+        where: { id: uuidSchema.parse(req.params.id) },
         data: input,
       }),
     );
@@ -491,7 +502,7 @@ app.get(
   "/admin/rate-cards",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (_req, res) => {
+  asyncHandler(async (_req, res) => {
     res.json(
       await prisma.pricing.findMany({ orderBy: { vehicleType: "asc" } }),
     );
@@ -501,11 +512,11 @@ app.patch(
   "/admin/rate-cards/:vehicleType",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const input = z
       .object({
-        baseFare: money,
-        perKmRate: money,
+        baseFare: moneySchema,
+        perKmRate: moneySchema,
         gstPercent: z.coerce.number().min(0).max(100),
       })
       .parse(req.body);
@@ -524,9 +535,13 @@ app.post(
   "/admin/bookings/:id/confirm",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
-    const bookingId = id.parse(req.params.id);
-    const { driverId } = z.object({ driverId: id }).parse(req.body);
+  asyncHandler(async (req, res) => {
+    const bookingId = uuidSchema.parse(req.params.id);
+    const { driverId } = z
+      .object({
+        driverId: uuidSchema,
+      })
+      .parse(req.body);
     const booking = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findUnique({
         where: { id: bookingId },
@@ -574,8 +589,8 @@ app.post(
   "/admin/bookings/:id/depart",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
-    const bookingId = id.parse(req.params.id);
+  asyncHandler(async (req, res) => {
+    const bookingId = uuidSchema.parse(req.params.id);
     const booking = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!current || current.status !== BookingStatus.CONFIRMED)
@@ -597,8 +612,8 @@ app.post(
   "/driver/bookings/:id/deliver",
   authenticate,
   allow(Role.DRIVER),
-  asyncRoute(async (req, res) => {
-    const bookingId = id.parse(req.params.id);
+  asyncHandler(async (req, res) => {
+    const bookingId = uuidSchema.parse(req.params.id);
     const { notes } = z
       .object({ notes: z.string().trim().min(3).max(2000) })
       .parse(req.body);
@@ -639,8 +654,8 @@ app.post(
   "/admin/bookings/:id/close",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
-    const bookingId = id.parse(req.params.id);
+  asyncHandler(async (req, res) => {
+    const bookingId = uuidSchema.parse(req.params.id);
     const booking = await prisma.$transaction(async (tx) => {
       const current = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!current || current.status !== BookingStatus.INVOICED)
@@ -662,8 +677,8 @@ app.post(
   "/admin/bookings/:id/cancel",
   authenticate,
   allow(Role.ADMIN),
-  asyncRoute(async (req, res) => {
-    const bookingId = id.parse(req.params.id);
+  asyncHandler(async (req, res) => {
+    const bookingId = uuidSchema.parse(req.params.id);
     const { reason } = z
       .object({ reason: z.string().trim().min(3).max(500) })
       .parse(req.body);
@@ -696,9 +711,9 @@ app.post(
 app.get(
   "/bookings/:id/documents/:kind",
   authenticate,
-  asyncRoute(async (req, res) => {
+  asyncHandler(async (req, res) => {
     const booking = await prisma.booking.findUnique({
-      where: { id: id.parse(req.params.id) },
+      where: { id: uuidSchema.parse(req.params.id) },
     });
     if (
       !booking ||
@@ -722,25 +737,7 @@ app.get(
   }),
 );
 
-app.use((_req, res) => res.status(404).json({ message: "Route not found" }));
-app.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  if (error instanceof z.ZodError) {
-    res
-      .status(400)
-      .json({ message: "Validation failed", issues: error.issues });
-    return;
-  }
-  if (error instanceof Error) {
-    res
-      .status(
-        error.message.includes("no longer") || error.message.includes("Only ")
-          ? 409
-          : 400,
-      )
-      .json({ message: error.message });
-    return;
-  }
-  res.status(500).json({ message: "Unexpected server error" });
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 export default app;
