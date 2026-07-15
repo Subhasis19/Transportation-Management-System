@@ -2,18 +2,12 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
+import { env } from "../config/env";
 import { Role } from "../generated/prisma/client";
 import { prisma } from "./prisma";
 
-const legacySecret = process.env.JWT_SECRET;
-const accessSecret =
-  process.env.JWT_ACCESS_SECRET ||
-  legacySecret ||
-  "development-access-secret-change-me";
-const refreshSecret =
-  process.env.JWT_REFRESH_SECRET ||
-  legacySecret ||
-  "development-refresh-secret-change-me";
+const accessSecret = env.JWT_ACCESS_SECRET;
+const refreshSecret = env.JWT_REFRESH_SECRET;
 
 export type AuthUser = { id: string; role: Role; email: string };
 export type AuthRequest = Request & { user?: AuthUser };
