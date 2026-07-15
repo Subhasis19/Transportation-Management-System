@@ -1,15 +1,14 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import bcrypt from "bcrypt";
 import { z } from "zod";
 
 import { env } from "./config/env";
 
-import { 
+import {
   BookingStatus,
-  Role, 
-  VehicleStatus 
+  Role,
+  VehicleStatus
 } from "./generated/prisma/client";
 
 import {
@@ -22,21 +21,16 @@ import { asyncHandler } from "./middleware/async-handler";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
 
-import {
-  allow,
-  authenticate,
-  issueRefreshToken,
-  rotateRefreshToken,
-  signAccessToken,
-} from "./lib/auth";
+import { allow, authenticate } from "./lib/auth";
 
 import { prisma } from "./lib/prisma";
 import { signedDocumentUrl } from "./lib/storage";
+import { authRouter } from "./modules/auth/auth.routes";
 
 
-import { 
-  createInvoice, 
-  createLorryReceipt 
+import {
+  createInvoice,
+  createLorryReceipt
 } from "./services/documents";
 
 
@@ -51,6 +45,7 @@ app.use(
   }),
 );
 app.use(express.json());
+app.use("/auth", authRouter);
 
 const vehicleTypes = [
   "MINI_TRUCK",
@@ -71,99 +66,6 @@ const bookingInclude = {
 
 app.get("/health", (_req, res) =>
   res.json({ success: true, message: "TruckLine API is running" }),
-);
-
-app.post(
-  "/auth/register",
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        name: z.string().trim().min(2).max(100),
-        email: z.string().email(),
-        phone: z
-          .string()
-          .trim()
-          .regex(/^\+?[0-9]{10,15}$/),
-        password: z.string().min(8).max(72),
-      })
-      .parse(req.body);
-    const { password, ...profile } = input;
-    const user = await prisma.user.create({
-      data: {
-        ...profile,
-        email: profile.email.toLowerCase(),
-        passwordHash: await bcrypt.hash(password, 12),
-        role: Role.CUSTOMER,
-      },
-    });
-    const authUser = { id: user.id, role: user.role, email: user.email };
-    res.status(201).json({
-      user: { id: user.id, name: user.name, role: user.role },
-      accessToken: signAccessToken(authUser),
-      refreshToken: await issueRefreshToken(user.id),
-    });
-  }),
-);
-
-app.post(
-  "/auth/login",
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({ email: z.string().email(), password: z.string().min(1) })
-      .parse(req.body);
-    const user = await prisma.user.findUnique({
-      where: { email: input.email.toLowerCase() },
-    });
-    if (
-      !user ||
-      !user.isActive ||
-      !(await bcrypt.compare(input.password, user.passwordHash))
-    ) {
-      res.status(401).json({ message: "Invalid email or password" });
-      return;
-    }
-    res.json({
-      user: { id: user.id, name: user.name, role: user.role },
-      accessToken: signAccessToken({
-        id: user.id,
-        role: user.role,
-        email: user.email,
-      }),
-      refreshToken: await issueRefreshToken(user.id),
-    });
-  }),
-);
-
-app.post(
-  "/auth/refresh",
-  asyncHandler(async (req, res) => {
-    const refreshToken = z
-      .object({ refreshToken: z.string().min(1) })
-      .parse(req.body).refreshToken;
-    res.json(await rotateRefreshToken(refreshToken));
-  }),
-);
-
-app.post(
-  "/auth/logout",
-  authenticate,
-  asyncHandler(async (req, res) => {
-    const raw = z
-      .object({ refreshToken: z.string().min(1) })
-      .parse(req.body).refreshToken;
-    const tokens = await prisma.refreshToken.findMany({
-      where: { userId: req.user!.id },
-    });
-    const found = await Promise.all(
-      tokens.map(async (token) => ({
-        token,
-        matches: await bcrypt.compare(raw, token.tokenHash),
-      })),
-    ).then((x) => x.find((x) => x.matches));
-    if (found)
-      await prisma.refreshToken.delete({ where: { id: found.token.id } });
-    res.status(204).send();
-  }),
 );
 
 app.get(
