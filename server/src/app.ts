@@ -11,11 +11,7 @@ import {
   VehicleStatus
 } from "./generated/prisma/client";
 
-import {
-  moneySchema,
-  positiveMoneySchema,
-  uuidSchema,
-} from "./common/schemas/common.schema";
+import { positiveMoneySchema, uuidSchema } from "./common/schemas/common.schema";
 
 import { asyncHandler } from "./middleware/async-handler";
 import { errorHandler } from "./middleware/error-handler";
@@ -26,7 +22,18 @@ import { allow, authenticate } from "./lib/auth";
 import { prisma } from "./lib/prisma";
 import { signedDocumentUrl } from "./lib/storage";
 import { authRouter } from "./modules/auth/auth.routes";
-
+import {
+  locationRouter,
+  adminLocationRouter,
+} from "./modules/locations/location.routes";
+import {
+  quoteRouter,
+  adminRouteRouter,
+} from "./modules/routes/route.routes";
+import { adminVehicleRouter } from "./modules/vehicles/vehicle.routes";
+import { adminPricingRouter } from "./modules/pricing/pricing.routes";
+import { adminDriverRouter } from "./modules/drivers/driver.routes";
+import { adminDashboardRouter } from "./modules/dashboard/dashboard.routes";
 
 import {
   createInvoice,
@@ -46,13 +53,14 @@ app.use(
 );
 app.use(express.json());
 app.use("/auth", authRouter);
-
-const vehicleTypes = [
-  "MINI_TRUCK",
-  "LIGHT_TRUCK",
-  "MEDIUM_TRUCK",
-  "HEAVY_TRUCK",
-] as const;
+app.use("/locations", locationRouter);
+app.use("/quotes", quoteRouter);
+app.use("/admin/locations", adminLocationRouter);
+app.use("/admin/routes", adminRouteRouter);
+app.use("/admin/vehicles", adminVehicleRouter);
+app.use("/admin/rate-cards", adminPricingRouter);
+app.use("/admin/drivers", adminDriverRouter);
+app.use("/admin/dashboard", adminDashboardRouter);
 
 const isCompliant = (vehicle: { rcExpiry: Date; permitExpiry: Date }) =>
   vehicle.rcExpiry > new Date() && vehicle.permitExpiry > new Date();
@@ -66,66 +74,6 @@ const bookingInclude = {
 
 app.get("/health", (_req, res) =>
   res.json({ success: true, message: "TruckLine API is running" }),
-);
-
-app.get(
-  "/locations",
-  authenticate,
-  asyncHandler(async (_req, res) => {
-    res.json(await prisma.location.findMany({ orderBy: { cityName: "asc" } }));
-  }),
-);
-
-app.get(
-  "/quotes",
-  authenticate,
-  asyncHandler(async (req, res) => {
-    const query = z
-      .object({ fromLocationId: uuidSchema, toLocationId: uuidSchema })
-      .parse(req.query);
-    if (query.fromLocationId === query.toLocationId) {
-      res.status(400).json({ message: "Origin and destination must differ" });
-      return;
-    }
-    const route = await prisma.route.findUnique({
-      where: { fromLocationId_toLocationId: query },
-    });
-    if (!route) {
-      res.status(404).json({ message: "This route is not configured yet" });
-      return;
-    }
-    const vehicles = await prisma.vehicle.findMany({
-      where: {
-        status: VehicleStatus.AVAILABLE,
-        rcExpiry: { gt: new Date() },
-        permitExpiry: { gt: new Date() },
-      },
-      include: { rateCard: true },
-      orderBy: { capacityKg: "asc" },
-    });
-    res.json({
-      route: {
-        ...route,
-        distanceKm: Number(route.distanceKm),
-        tollAmount: Number(route.tollAmount),
-      },
-      options: vehicles.map((vehicle) => ({
-        vehicle: {
-          id: vehicle.id,
-          regNumber: vehicle.regNumber,
-          vehicleType: vehicle.vehicleType,
-          capacityKg: Number(vehicle.capacityKg),
-        },
-        fare: calculateFare({
-          distanceKm: Number(route.distanceKm),
-          tollAmount: Number(route.tollAmount),
-          baseFare: Number(vehicle.rateCard.baseFare),
-          perKmRate: Number(vehicle.rateCard.perKmRate),
-          gstPercent: Number(vehicle.rateCard.gstPercent),
-        }),
-      })),
-    });
-  }),
 );
 
 app.post(
@@ -216,218 +164,6 @@ app.get(
         where,
         include: bookingInclude,
         orderBy: { createdAt: "desc" },
-      }),
-    );
-  }),
-);
-
-app.get(
-  "/admin/dashboard",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (_req, res) => {
-    const [vehicles, bookings, revenue, expiringDocuments, recentBookings] =
-      await Promise.all([
-        prisma.vehicle.groupBy({ by: ["status"], _count: true }),
-        prisma.booking.groupBy({ by: ["status"], _count: true }),
-        prisma.booking.aggregate({
-          where: {
-            status: { in: [BookingStatus.INVOICED, BookingStatus.CLOSED] },
-            createdAt: {
-              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-            },
-          },
-          _sum: { estimatedFare: true },
-        }),
-        prisma.vehicle.findMany({
-          where: {
-            OR: [
-              { rcExpiry: { lte: new Date(Date.now() + 30 * 86400_000) } },
-              { permitExpiry: { lte: new Date(Date.now() + 30 * 86400_000) } },
-            ],
-          },
-          select: {
-            id: true,
-            regNumber: true,
-            rcExpiry: true,
-            permitExpiry: true,
-          },
-        }),
-        prisma.booking.findMany({
-          take: 8,
-          orderBy: { createdAt: "desc" },
-          include: bookingInclude,
-        }),
-      ]);
-    res.json({
-      vehicles,
-      bookings,
-      revenueThisMonth: Number(revenue._sum.estimatedFare || 0),
-      expiringDocuments,
-      recentBookings,
-    });
-  }),
-);
-
-app.get(
-  "/admin/drivers",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (_req, res) => {
-    res.json(
-      await prisma.user.findMany({
-        where: { role: Role.DRIVER, isActive: true },
-        select: {
-          id: true,
-          name: true,
-          licenseNumber: true,
-          licenseExpiry: true,
-        },
-      }),
-    );
-  }),
-);
-
-app.post(
-  "/admin/locations",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (req, res) => {
-    const cityName = z
-      .object({ cityName: z.string().trim().min(2).max(100) })
-      .parse(req.body).cityName;
-    res.status(201).json(await prisma.location.create({ data: { cityName } }));
-  }),
-);
-app.get(
-  "/admin/routes",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (_req, res) => {
-    res.json(
-      await prisma.route.findMany({
-        include: { fromLocation: true, toLocation: true },
-        orderBy: { fromLocation: { cityName: "asc" } },
-      }),
-    );
-  }),
-);
-app.post(
-  "/admin/routes",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        fromLocationId: uuidSchema,
-        toLocationId: uuidSchema,
-        distanceKm: z.coerce.number().positive().max(99_999),
-        tollAmount: moneySchema,
-      })
-      .parse(req.body);
-    if (input.fromLocationId === input.toLocationId) {
-      res.status(400).json({ message: "Origin and destination must differ" });
-      return;
-    }
-    res.status(201).json(
-      await prisma.route.upsert({
-        where: {
-          fromLocationId_toLocationId: {
-            fromLocationId: input.fromLocationId,
-            toLocationId: input.toLocationId,
-          },
-        },
-        update: {
-          distanceKm: input.distanceKm,
-          tollAmount: input.tollAmount,
-        },
-        create: input,
-      }),
-    );
-  }),
-);
-
-app.get(
-  "/admin/vehicles",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (_req, res) => {
-    res.json(
-      await prisma.vehicle.findMany({
-        include: { rateCard: true },
-        orderBy: { regNumber: "asc" },
-      }),
-    );
-  }),
-);
-app.post(
-  "/admin/vehicles",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        regNumber: z.string().trim().min(4).max(20),
-        vehicleType: z.enum(vehicleTypes),
-        capacityKg: positiveMoneySchema,
-        rcNumber: z.string().trim().min(3).max(50),
-        rcExpiry: z.coerce.date(),
-        permitNumber: z.string().trim().min(3).max(50),
-        permitExpiry: z.coerce.date(),
-      })
-      .parse(req.body);
-    res.status(201).json(await prisma.vehicle.create({ data: input }));
-  }),
-);
-app.patch(
-  "/admin/vehicles/:id",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        status: z.nativeEnum(VehicleStatus).optional(),
-        rcExpiry: z.coerce.date().optional(),
-        permitExpiry: z.coerce.date().optional(),
-      })
-      .parse(req.body);
-    res.json(
-      await prisma.vehicle.update({
-        where: { id: uuidSchema.parse(req.params.id) },
-        data: input,
-      }),
-    );
-  }),
-);
-
-app.get(
-  "/admin/rate-cards",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (_req, res) => {
-    res.json(
-      await prisma.pricing.findMany({ orderBy: { vehicleType: "asc" } }),
-    );
-  }),
-);
-app.patch(
-  "/admin/rate-cards/:vehicleType",
-  authenticate,
-  allow(Role.ADMIN),
-  asyncHandler(async (req, res) => {
-    const input = z
-      .object({
-        baseFare: moneySchema,
-        perKmRate: moneySchema,
-        gstPercent: z.coerce.number().min(0).max(100),
-      })
-      .parse(req.body);
-    res.json(
-      await prisma.pricing.update({
-        where: {
-          vehicleType: z.enum(vehicleTypes).parse(req.params.vehicleType),
-        },
-        data: input,
       }),
     );
   }),
