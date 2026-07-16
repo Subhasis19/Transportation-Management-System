@@ -244,7 +244,6 @@ function AuthScreen({
     defaultValues: { email: "", password: "", name: "", phone: "" },
   });
   async function submit(values: AuthFormValues) {
-    console.log("SUBMIT FIRED", values); // debug log to check if submit is firing
     try {
       const payload = await request<AuthSession>(
         registering ? "/auth/register" : "/auth/login",
