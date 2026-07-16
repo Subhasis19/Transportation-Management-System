@@ -3,11 +3,8 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ComponentPropsWithoutRef,
-  type ReactNode,
 } from "react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,9 +16,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ModeToggle } from "@/components/mode-toggle";
 import { AuthScreen } from "@/features/auth/auth-screen";
+import { Field } from "@/components/shared/field";
+import { LocationSelect } from "@/components/shared/location-select";
+import { bookingSchema } from "@/features/bookings/booking.schema";
 import { createApiClient } from "./lib/api-client";
 import { currency } from "./lib/formatters";
 import {
@@ -31,6 +30,10 @@ import {
   saveStoredSession,
 } from "./lib/session-storage";
 import type { ApiRequest } from "./lib/api-client";
+import type {
+  BookingFormInput,
+  BookingFormValues,
+} from "@/features/bookings/booking.types";
 import type {
   AuthSession,
   Booking,
@@ -42,21 +45,6 @@ import type {
   User,
   WorkspaceData,
 } from "./types/domain";
-
-type BookingFormInput = z.input<typeof bookingSchema>;
-type BookingFormValues = z.infer<typeof bookingSchema>;
-const bookingSchema = z.object({
-  fromLocationId: z.string().uuid(),
-  toLocationId: z.string().uuid(),
-  pickupAt: z.string().min(1),
-  vehicleId: z.string().uuid(),
-  consignorName: z.string().min(2),
-  consigneeName: z.string().min(2),
-  materialDescription: z.string().min(2),
-  weightKg: z.coerce.number().positive(),
-  declaredValue: z.coerce.number().positive(),
-  viaRoute: z.string().optional(),
-});
 
 function App() {
   const [user, setUser] = useState<User | null>(getStoredUser);
@@ -309,12 +297,12 @@ function CustomerWorkspace({
           <CardContent>
             <form className="space-y-5" onSubmit={form.handleSubmit(submit)}>
               <div className="grid gap-4 sm:grid-cols-2">
-                <SelectField
+                <LocationSelect
                   label="From"
                   {...form.register("fromLocationId")}
                   locations={locations}
                 />
-                <SelectField
+                <LocationSelect
                   label="To"
                   {...form.register("toLocationId")}
                   locations={locations}
@@ -706,44 +694,6 @@ function BookingList({
         )}
       </CardContent>
     </Card>
-  );
-}
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {children}
-      {error && <p className="text-xs text-rose-600">{error}</p>}
-    </div>
-  );
-}
-function SelectField({
-  label,
-  locations,
-  ...props
-}: { label: string; locations: Location[] } & ComponentPropsWithoutRef<"select">) {
-  return (
-    <Field label={label}>
-      <select
-        className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
-        {...props}
-      >
-        <option value="">Select city</option>
-        {locations.map((location: Location) => (
-          <option key={location.id} value={location.id}>
-            {location.cityName}
-          </option>
-        ))}
-      </select>
-    </Field>
   );
 }
 export default App;

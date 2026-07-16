@@ -1,7 +1,8 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { ModeToggle } from "@/components/mode-toggle";
+import { Field } from "@/components/shared/field";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,7 +12,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import type { ApiRequest } from "@/lib/api-client";
 import type { AuthSession, Report } from "@/types/domain";
 import { authSchema, type AuthFormValues } from "./auth.schema";
@@ -119,23 +119,5 @@ export function AuthScreen({
         </CardContent>
       </Card>
     </main>
-  );
-}
-
-function Field({
-  label,
-  error,
-  children,
-}: {
-  label: string;
-  error?: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label>{label}</Label>
-      {children}
-      {error && <p className="text-xs text-rose-600">{error}</p>}
-    </div>
   );
 }
