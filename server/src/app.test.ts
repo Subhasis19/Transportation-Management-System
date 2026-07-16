@@ -49,6 +49,21 @@ test("responses include Helmet security headers", async () => {
   assert.equal(response.headers["x-content-type-options"], "nosniff");
 });
 
+test("responses do not disclose the Express implementation header", async () => {
+  const response = await request(app).get("/health");
+
+  assert.equal(response.headers["x-powered-by"], undefined);
+});
+
+test("oversized JSON requests are rejected", async () => {
+  const response = await request(app)
+    .post("/auth/login")
+    .set("Content-Type", "application/json")
+    .send({ email: "test@example.com", password: "x", padding: "x".repeat(101 * 1024) });
+
+  assert.equal(response.status, 413);
+});
+
 test("the configured frontend origin receives the CORS header", async () => {
   const response = await request(app)
     .get("/health")
@@ -58,4 +73,12 @@ test("the configured frontend origin receives the CORS header", async () => {
     response.headers["access-control-allow-origin"],
     "http://frontend.test.local",
   );
+});
+
+test("an unapproved browser origin is not reflected by CORS", async () => {
+  const response = await request(app)
+    .get("/health")
+    .set("Origin", "https://unapproved.example");
+
+  assert.equal(response.headers["access-control-allow-origin"], undefined);
 });

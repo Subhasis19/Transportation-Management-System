@@ -5,6 +5,7 @@ import helmet from "helmet";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error-handler";
 import { notFoundHandler } from "./middleware/not-found";
+import { apiRateLimiter } from "./middleware/rate-limit";
 import { authRouter } from "./modules/auth/auth.routes";
 import {
   locationRouter,
@@ -25,14 +26,21 @@ import {
 } from "./modules/bookings/booking.routes";
 
 const app = express();
+app.disable("x-powered-by");
+if (env.TRUST_PROXY) app.set("trust proxy", 1);
 app.use(helmet());
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin(origin, callback) {
+      callback(null, !origin || origin === env.FRONTEND_URL);
+    },
     credentials: true,
+    methods: ["GET", "POST", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Authorization", "Content-Type"],
   }),
 );
-app.use(express.json());
+app.use(express.json({ limit: "100kb" }));
+app.use(apiRateLimiter);
 app.use("/auth", authRouter);
 app.use("/locations", locationRouter);
 app.use("/quotes", quoteRouter);

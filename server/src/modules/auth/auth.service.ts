@@ -58,6 +58,9 @@ export async function refreshAuthentication(input: RefreshTokenInput) {
 }
 
 export async function logoutUser(userId: string, input: RefreshTokenInput) {
+    await prisma.refreshToken.deleteMany({
+        where: { userId, expiresAt: { lte: new Date() } },
+    });
     const tokens = await prisma.refreshToken.findMany({
         where: { userId },
     });

@@ -5,6 +5,7 @@ import { signedDocumentUrl } from "../../lib/storage";
 import { calculateFare } from "../../services/fare";
 import type { CreateBookingInput } from "./booking.schema";
 import { bookingInclude, isVehicleCompliant } from "./booking.shared";
+import { isWeightWithinVehicleCapacity } from "./booking.rules";
 
 export async function createBooking(customerId: string, input: CreateBookingInput) {
     return prisma.$transaction(async (tx) => {
@@ -30,13 +31,17 @@ export async function createBooking(customerId: string, input: CreateBookingInpu
             throw new AppError(409, "This vehicle is no longer available or compliant");
         }
 
+        if (!isWeightWithinVehicleCapacity(Number(input.weightKg), Number(vehicle.capacityKg))) {
+            throw new AppError(409, "Cargo weight exceeds vehicle capacity");
+        }
+
         const reserved = await tx.vehicle.updateMany({
             where: { id: vehicle.id, status: VehicleStatus.AVAILABLE },
             data: { status: VehicleStatus.RESERVED },
         });
 
         if (reserved.count !== 1) {
-            throw new AppError(400, "This vehicle was just reserved by another booking");
+            throw new AppError(409, "This vehicle was just reserved by another booking");
         }
 
         const fare = calculateFare({

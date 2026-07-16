@@ -3,6 +3,7 @@ import { BookingStatus, Role, VehicleStatus } from "../../generated/prisma/clien
 import { prisma } from "../../lib/prisma";
 import { createInvoice, createLorryReceipt } from "../../services/documents";
 import { isVehicleCompliant } from "./booking.shared";
+import { canAssignDriverToActiveTrip } from "./booking.rules";
 
 export async function confirmBooking(bookingId: string, driverId: string) {
     const booking = await prisma.$transaction(async (tx) => {
@@ -17,13 +18,26 @@ export async function confirmBooking(bookingId: string, driverId: string) {
         }
 
         if (
+            current.vehicle.status !== VehicleStatus.RESERVED ||
             !driver ||
             driver.role !== Role.DRIVER ||
+            !driver.isActive ||
+            !driver.licenseNumber ||
             !driver.licenseExpiry ||
             driver.licenseExpiry <= new Date() ||
             !isVehicleCompliant(current.vehicle)
         ) {
             throw new AppError(400, "Vehicle or assigned driver is not compliant");
+        }
+
+        const activeAssignments = await tx.booking.count({
+            where: {
+                driverId,
+                status: { in: [BookingStatus.CONFIRMED, BookingStatus.IN_TRANSIT] },
+            },
+        });
+        if (!canAssignDriverToActiveTrip(activeAssignments)) {
+            throw new AppError(409, "Driver is already assigned to an active trip");
         }
 
         return tx.booking.update({
@@ -42,7 +56,25 @@ export async function confirmBooking(bookingId: string, driverId: string) {
         include: { vehicle: true },
     });
 
-    const lrPdfUrl = await createLorryReceipt(complete, complete.vehicle.regNumber);
+    let lrPdfUrl: string;
+    try {
+        lrPdfUrl = await createLorryReceipt(complete, complete.vehicle.regNumber);
+    } catch {
+        await prisma.booking.updateMany({
+            where: {
+                id: booking.id,
+                status: BookingStatus.CONFIRMED,
+                lrPdfUrl: null,
+            },
+            data: {
+                status: BookingStatus.PENDING,
+                driverId: null,
+                lrNumber: null,
+                lrGeneratedAt: null,
+            },
+        });
+        throw new AppError(500, "Unable to generate lorry receipt");
+    }
 
     return prisma.booking.update({
         where: { id: booking.id },
@@ -52,9 +84,19 @@ export async function confirmBooking(bookingId: string, driverId: string) {
 
 export async function departBooking(bookingId: string) {
     return prisma.$transaction(async (tx) => {
-        const current = await tx.booking.findUnique({ where: { id: bookingId } });
+        const current = await tx.booking.findUnique({
+            where: { id: bookingId },
+            include: { vehicle: true },
+        });
 
-        if (!current || current.status !== BookingStatus.CONFIRMED) {
+        if (
+            !current ||
+            current.status !== BookingStatus.CONFIRMED ||
+            !current.driverId ||
+            current.vehicle.status !== VehicleStatus.RESERVED ||
+            !isVehicleCompliant(current.vehicle) ||
+            !current.lrPdfUrl
+        ) {
             throw new AppError(409, "Only confirmed bookings can depart");
         }
 
@@ -71,6 +113,14 @@ export async function departBooking(bookingId: string) {
 }
 
 export async function deliverBooking(bookingId: string, driverId: string, notes: string) {
+    const current = await prisma.booking.findUnique({
+        where: { id: bookingId },
+        include: { vehicle: true },
+    });
+    if (!current || current.driverId !== driverId || current.status !== BookingStatus.IN_TRANSIT || current.vehicle.status !== VehicleStatus.ON_TRIP) {
+        throw new AppError(409, "This trip is not available for delivery");
+    }
+
     const delivered = await prisma.booking.updateMany({
         where: {
             id: bookingId,
@@ -91,7 +141,24 @@ export async function deliverBooking(bookingId: string, driverId: string, notes:
     }
 
     const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
-    const invoicePdfUrl = await createInvoice(booking);
+    let invoicePdfUrl: string;
+    try {
+        invoicePdfUrl = await createInvoice(booking);
+    } catch {
+        await prisma.booking.updateMany({
+            where: {
+                id: bookingId,
+                status: BookingStatus.INVOICED,
+                invoicePdfUrl: null,
+            },
+            data: {
+                status: BookingStatus.IN_TRANSIT,
+                invoiceNumber: null,
+                invoiceGeneratedAt: null,
+            },
+        });
+        throw new AppError(500, "Unable to generate invoice");
+    }
 
     return prisma.booking.update({
         where: { id: bookingId },
@@ -101,9 +168,17 @@ export async function deliverBooking(bookingId: string, driverId: string, notes:
 
 export async function closeBooking(bookingId: string) {
     return prisma.$transaction(async (tx) => {
-        const current = await tx.booking.findUnique({ where: { id: bookingId } });
+        const current = await tx.booking.findUnique({
+            where: { id: bookingId },
+            include: { vehicle: true },
+        });
 
-        if (!current || current.status !== BookingStatus.INVOICED) {
+        if (
+            !current ||
+            current.status !== BookingStatus.INVOICED ||
+            !current.invoicePdfUrl ||
+            current.vehicle.status !== VehicleStatus.ON_TRIP
+        ) {
             throw new AppError(409, "Only invoiced trips can be closed");
         }
 
@@ -121,11 +196,15 @@ export async function closeBooking(bookingId: string) {
 
 export async function cancelBooking(bookingId: string, reason: string) {
     return prisma.$transaction(async (tx) => {
-        const current = await tx.booking.findUnique({ where: { id: bookingId } });
+        const current = await tx.booking.findUnique({
+            where: { id: bookingId },
+            include: { vehicle: true },
+        });
 
         if (
             !current ||
-            !([BookingStatus.PENDING, BookingStatus.CONFIRMED] as BookingStatus[]).includes(current.status)
+            !([BookingStatus.PENDING, BookingStatus.CONFIRMED] as BookingStatus[]).includes(current.status) ||
+            current.vehicle.status !== VehicleStatus.RESERVED
         ) {
             throw new AppError(409, "Only pending or confirmed bookings can be cancelled");
         }

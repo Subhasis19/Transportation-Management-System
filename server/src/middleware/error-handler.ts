@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { z } from "zod";
 import { AppError } from "../common/errors/app-error";
+import { Prisma } from "../generated/prisma/client";
 
 export const errorHandler: ErrorRequestHandler = (
     error,
@@ -25,19 +26,28 @@ export const errorHandler: ErrorRequestHandler = (
         return;
     }
 
-    if (error instanceof Error) {
-        res
-            .status(
-                error.message.includes("no longer") ||
-                    error.message.includes("Only ")
-                    ? 409
-                    : 400,
-            )
-            .json({ message: error.message });
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === "P2002") {
+            res.status(409).json({ message: "A conflicting record already exists" });
+            return;
+        }
+        if (error.code === "P2025") {
+            res.status(404).json({ message: "Requested record was not found" });
+            return;
+        }
+    }
 
+    if (
+        error &&
+        typeof error === "object" &&
+        "status" in error &&
+        error.status === 413
+    ) {
+        res.status(413).json({ message: "Request body too large" });
         return;
     }
 
+    console.error("Unexpected server error");
     res.status(500).json({
         message: "Unexpected server error",
     });

@@ -13,6 +13,11 @@ const envSchema = z.object({
     .url()
     .default("http://localhost:5173"),
 
+  TRUST_PROXY: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
   JWT_ACCESS_SECRET: z
