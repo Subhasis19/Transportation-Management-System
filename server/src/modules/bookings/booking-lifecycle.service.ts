@@ -1,12 +1,73 @@
 import { AppError } from "../../common/errors/app-error";
-import { BookingStatus, Role, VehicleStatus } from "../../generated/prisma/client";
+import { BookingStatus, Prisma, Role, VehicleStatus } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { createInvoice, createLorryReceipt } from "../../services/documents";
 import { isVehicleCompliant } from "./booking.shared";
 import { canAssignDriverToActiveTrip } from "./booking.rules";
 
+const confirmationAttempts = 3;
+
+export function confirmationCompensation(bookingId: string) {
+    return {
+        where: {
+            id: bookingId,
+            status: BookingStatus.CONFIRMED,
+            lrPdfUrl: null,
+        },
+        data: {
+            status: BookingStatus.PENDING,
+            driverId: null,
+            lrNumber: null,
+            lrGeneratedAt: null,
+            lrPdfUrl: null,
+        },
+    };
+}
+
+export function invoiceCompensation(bookingId: string) {
+    return {
+        where: {
+            id: bookingId,
+            status: BookingStatus.INVOICED,
+            invoicePdfUrl: null,
+        },
+        data: {
+            status: BookingStatus.IN_TRANSIT,
+            invoiceNumber: null,
+            invoiceGeneratedAt: null,
+            invoicePdfUrl: null,
+            deliveryNotes: null,
+            deliveryTime: null,
+        },
+    };
+}
+
+function isTransactionConflict(error: unknown) {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        error.code === "P2034"
+    );
+}
+
+export async function retryConfirmationTransaction<T>(operation: () => Promise<T>) {
+    for (let attempt = 1; attempt <= confirmationAttempts; attempt += 1) {
+        try {
+            return await operation();
+        } catch (error) {
+            if (!isTransactionConflict(error)) throw error;
+            if (attempt === confirmationAttempts) {
+                throw new AppError(409, "Booking confirmation conflict; please try again");
+            }
+        }
+    }
+
+    throw new AppError(409, "Booking confirmation conflict; please try again");
+}
+
 export async function confirmBooking(bookingId: string, driverId: string) {
-    const booking = await prisma.$transaction(async (tx) => {
+    const booking = await retryConfirmationTransaction(() => prisma.$transaction(async (tx) => {
         const current = await tx.booking.findUnique({
             where: { id: bookingId },
             include: { vehicle: true },
@@ -49,37 +110,23 @@ export async function confirmBooking(bookingId: string, driverId: string) {
                 lrGeneratedAt: new Date(),
             },
         });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
 
     const complete = await prisma.booking.findUniqueOrThrow({
         where: { id: booking.id },
         include: { vehicle: true },
     });
 
-    let lrPdfUrl: string;
     try {
-        lrPdfUrl = await createLorryReceipt(complete, complete.vehicle.regNumber);
-    } catch {
-        await prisma.booking.updateMany({
-            where: {
-                id: booking.id,
-                status: BookingStatus.CONFIRMED,
-                lrPdfUrl: null,
-            },
-            data: {
-                status: BookingStatus.PENDING,
-                driverId: null,
-                lrNumber: null,
-                lrGeneratedAt: null,
-            },
+        const lrPdfUrl = await createLorryReceipt(complete, complete.vehicle.regNumber);
+        return await prisma.booking.update({
+            where: { id: booking.id },
+            data: { lrPdfUrl },
         });
+    } catch {
+        await prisma.booking.updateMany(confirmationCompensation(booking.id));
         throw new AppError(500, "Unable to generate lorry receipt");
     }
-
-    return prisma.booking.update({
-        where: { id: booking.id },
-        data: { lrPdfUrl },
-    });
 }
 
 export async function departBooking(bookingId: string) {
@@ -141,29 +188,16 @@ export async function deliverBooking(bookingId: string, driverId: string, notes:
     }
 
     const booking = await prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
-    let invoicePdfUrl: string;
     try {
-        invoicePdfUrl = await createInvoice(booking);
-    } catch {
-        await prisma.booking.updateMany({
-            where: {
-                id: bookingId,
-                status: BookingStatus.INVOICED,
-                invoicePdfUrl: null,
-            },
-            data: {
-                status: BookingStatus.IN_TRANSIT,
-                invoiceNumber: null,
-                invoiceGeneratedAt: null,
-            },
+        const invoicePdfUrl = await createInvoice(booking);
+        return await prisma.booking.update({
+            where: { id: bookingId },
+            data: { invoicePdfUrl },
         });
+    } catch {
+        await prisma.booking.updateMany(invoiceCompensation(bookingId));
         throw new AppError(500, "Unable to generate invoice");
     }
-
-    return prisma.booking.update({
-        where: { id: bookingId },
-        data: { invoicePdfUrl },
-    });
 }
 
 export async function closeBooking(bookingId: string) {

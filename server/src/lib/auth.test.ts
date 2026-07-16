@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "./auth";
 
-const { authenticate, signAccessToken } = await import("./auth");
+const { allow, authenticate, signAccessToken } = await import("./auth");
 const { Role } = await import("../generated/prisma/client");
 
 function authenticateToken(token: string | undefined) {
@@ -106,4 +106,46 @@ test("authenticate accepts a valid configured access token", () => {
 
   assert.equal(result.nextCalled, true);
   assert.equal(result.request.user?.id, "user-123");
+});
+
+test("allow calls next for an allowed role", () => {
+  let nextCalled = false;
+  const response = {
+    status: () => response,
+    json: () => response,
+  } as unknown as Response;
+  const request = {
+    user: { id: "driver-123", role: Role.DRIVER, email: "driver@example.com" },
+  } as unknown as AuthRequest;
+
+  allow(Role.DRIVER)(request, response, () => {
+    nextCalled = true;
+  });
+
+  assert.equal(nextCalled, true);
+});
+
+test("allow returns 403 for a forbidden role", () => {
+  let statusCode = 0;
+  let body: unknown;
+  const response = {
+    status(code: number) {
+      statusCode = code;
+      return response;
+    },
+    json(value: unknown) {
+      body = value;
+      return response;
+    },
+  } as unknown as Response;
+  const request = {
+    user: { id: "customer-123", role: Role.CUSTOMER, email: "customer@example.com" },
+  } as unknown as AuthRequest;
+
+  allow(Role.DRIVER)(request, response, () => {
+    throw new Error("next should not be called");
+  });
+
+  assert.equal(statusCode, 403);
+  assert.deepEqual(body, { message: "You do not have permission for this action" });
 });

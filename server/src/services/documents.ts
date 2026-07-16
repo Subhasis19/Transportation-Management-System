@@ -2,6 +2,16 @@ import PDFDocument from "pdfkit";
 import type { Booking } from "../generated/prisma/client";
 import { uploadPrivatePdf } from "../lib/storage";
 
+type PdfUploader = typeof uploadPrivatePdf;
+
+export function uploadGeneratedBookingDocument(
+  path: string,
+  contents: Buffer,
+  upload: PdfUploader = uploadPrivatePdf,
+) {
+  return upload(path, contents, { upsert: true });
+}
+
 function renderPdf(title: string, rows: Array<[string, string]>) {
   return new Promise<Buffer>((resolve, reject) => {
     const doc = new PDFDocument({ margin: 48 });
@@ -18,10 +28,10 @@ function renderPdf(title: string, rows: Array<[string, string]>) {
 
 export async function createLorryReceipt(booking: Booking, vehicleReg: string) {
   const pdf = await renderPdf("Lorry Receipt", [["LR Number", booking.lrNumber || "Pending"], ["Booking", booking.id], ["Vehicle", vehicleReg], ["Consignor", booking.consignorName], ["Consignee", booking.consigneeName], ["Material", booking.materialDescription], ["Weight", `${booking.weightKg} kg`], ["Distance", `${booking.distanceKm} km`]]);
-  return uploadPrivatePdf(`lr/${booking.id}.pdf`, pdf);
+  return uploadGeneratedBookingDocument(`lr/${booking.id}.pdf`, pdf);
 }
 
 export async function createInvoice(booking: Booking) {
   const pdf = await renderPdf("Tax Invoice", [["Invoice Number", booking.invoiceNumber || "Pending"], ["Booking", booking.id], ["Base fare", `INR ${booking.baseFare}`], ["Distance charge", `INR ${booking.distanceCharge}`], ["Toll", `INR ${booking.tollAmount}`], ["GST", `INR ${booking.gstAmount}`], ["Total", `INR ${booking.estimatedFare}`]]);
-  return uploadPrivatePdf(`invoices/${booking.id}.pdf`, pdf);
+  return uploadGeneratedBookingDocument(`invoices/${booking.id}.pdf`, pdf);
 }
