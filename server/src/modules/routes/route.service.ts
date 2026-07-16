@@ -1,5 +1,5 @@
 import { AppError } from "../../common/errors/app-error";
-import { Role, VehicleStatus } from "../../generated/prisma/client";
+import { VehicleStatus } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { calculateFare } from "../../services/fare";
 import type { CreateRouteInput, QuoteQueryInput } from "./route.schema";
