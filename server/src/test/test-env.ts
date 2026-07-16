@@ -1,0 +1,9 @@
+process.env.NODE_ENV ??= "test";
+process.env.PORT ??= "5999";
+process.env.FRONTEND_URL ??= "http://frontend.test.local";
+process.env.DATABASE_URL ??= "postgresql://test:test@127.0.0.1:5432/truckline_test";
+process.env.JWT_ACCESS_SECRET ??= "test-access-secret-0123456789-abcdefghijklmnopqrstuvwxyz";
+process.env.JWT_REFRESH_SECRET ??= "test-refresh-secret-0123456789-abcdefghijklmnopqrstuvwxyz";
+process.env.SUPABASE_URL ??= "https://test.supabase.invalid";
+process.env.SUPABASE_SERVICE_ROLE_KEY ??= "test-service-role-key";
+process.env.SUPABASE_STORAGE_BUCKET ??= "test-documents";
