@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useState,
   type ComponentPropsWithoutRef,
   type ReactNode,
@@ -20,119 +21,30 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ModeToggle } from "@/components/mode-toggle";
+import { createApiClient } from "./lib/api-client";
+import { currency } from "./lib/formatters";
+import {
+  clearStoredSession,
+  getStoredAccessToken,
+  getStoredUser,
+  saveStoredSession,
+} from "./lib/session-storage";
+import type { ApiRequest } from "./lib/api-client";
+import type {
+  AuthSession,
+  Booking,
+  Dashboard,
+  Driver,
+  Location,
+  Quote,
+  Report,
+  User,
+  WorkspaceData,
+} from "./types/domain";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
-type Role = "ADMIN" | "CUSTOMER" | "DRIVER";
-type VehicleStatus =
-  | "AVAILABLE"
-  | "RESERVED"
-  | "ON_TRIP"
-  | "MAINTENANCE"
-  | "BREAKDOWN";
-type BookingStatus =
-  | "PENDING"
-  | "CONFIRMED"
-  | "IN_TRANSIT"
-  | "DELIVERED"
-  | "INVOICED"
-  | "CLOSED"
-  | "CANCELLED";
-type User = { id: string; name: string; role: Role };
-type Location = { id: string; cityName: string };
-type Quote = {
-  route: { distanceKm: number; tollAmount: number };
-  options: Array<{
-    vehicle: {
-      id: string;
-      regNumber: string;
-      vehicleType: string;
-      capacityKg: number;
-    };
-    fare: {
-      baseFare: number;
-      distanceCharge: number;
-      tollAmount: number;
-      gstAmount: number;
-      total: number;
-    };
-  }>;
-};
-type AuthSession = {
-  user: User;
-  accessToken: string;
-  refreshToken: string;
-};
-type Booking = {
-  id: string;
-  status: BookingStatus;
-  materialDescription: string;
-  estimatedFare: number | string;
-  lrPdfUrl: string | null;
-  invoicePdfUrl: string | null;
-  customer: Pick<User, "name">;
-  vehicle: { regNumber: string };
-  fromLocation: Location;
-  toLocation: Location;
-};
-type Driver = {
-  id: string;
-  name: string;
-  licenseNumber: string | null;
-  licenseExpiry: string | null;
-};
-type Dashboard = {
-  vehicles: Array<{ status: VehicleStatus; _count: number }>;
-  revenueThisMonth: number;
-  expiringDocuments: Array<{
-    id: string;
-    regNumber: string;
-    rcExpiry: string;
-    permitExpiry: string;
-  }>;
-  recentBookings: Booking[];
-};
-type WorkspaceData =
-  | { role: "CUSTOMER"; locations: Location[]; bookings: Booking[] }
-  | { role: "DRIVER"; bookings: Booking[] }
-  | { role: "ADMIN"; dashboard: Dashboard };
-type ApiRequest = <ResponseBody>(
-  path: string,
-  options?: RequestInit,
-) => Promise<ResponseBody>;
-type Report = (message: string) => void;
 type AuthFormValues = z.infer<typeof authSchema>;
 type BookingFormInput = z.input<typeof bookingSchema>;
 type BookingFormValues = z.infer<typeof bookingSchema>;
-
-function isUser(value: unknown): value is User {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  return (
-    typeof candidate.id === "string" &&
-    typeof candidate.name === "string" &&
-    (candidate.role === "ADMIN" ||
-      candidate.role === "CUSTOMER" ||
-      candidate.role === "DRIVER")
-  );
-}
-
-function storedUser(): User | null {
-  const rawUser = localStorage.getItem("tms-user");
-  if (!rawUser) return null;
-
-  try {
-    const parsed: unknown = JSON.parse(rawUser);
-    return isUser(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function errorMessage(body: unknown): string | null {
-  if (!body || typeof body !== "object" || !("message" in body)) return null;
-  const message = (body as { message: unknown }).message;
-  return typeof message === "string" ? message : null;
-}
 const authSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -152,44 +64,16 @@ const bookingSchema = z.object({
   viaRoute: z.string().optional(),
 });
 
-const currency = (value: number) =>
-  new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 0,
-  }).format(value);
-
 function App() {
-  const [user, setUser] = useState<User | null>(storedUser);
-  const [accessToken, setAccessToken] = useState(
-    () => localStorage.getItem("tms-access") || "",
-  );
+  const [user, setUser] = useState<User | null>(getStoredUser);
+  const [accessToken, setAccessToken] = useState(getStoredAccessToken);
   const [locations, setLocations] = useState<Location[]>([]);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [message, setMessage] = useState("");
 
-  const request = useCallback<ApiRequest>(
-    async <ResponseBody,>(path: string, options: RequestInit = {}) => {
-      const headers = new Headers(options.headers);
-      headers.set("Content-Type", "application/json");
-      if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-
-      const response = await fetch(`${API}${path}`, { ...options, headers });
-      const contentType = response.headers.get("content-type") || "";
-      const body: unknown =
-        response.status === 204
-          ? null
-          : contentType.includes("application/json")
-            ? await response.json()
-            : await response.text();
-      if (!response.ok)
-        throw new Error(errorMessage(body) || "Something went wrong");
-      return body as ResponseBody;
-    },
-    [accessToken],
-  );
+  const request = useMemo(() => createApiClient(accessToken), [accessToken]);
 
   const fetchWorkspace = useCallback(
     async (signal?: AbortSignal): Promise<WorkspaceData | null> => {
@@ -258,17 +142,13 @@ function App() {
   }, [applyWorkspace, fetchWorkspace]);
 
   function saveSession(payload: AuthSession) {
-    localStorage.setItem("tms-user", JSON.stringify(payload.user));
-    localStorage.setItem("tms-access", payload.accessToken);
-    localStorage.setItem("tms-refresh", payload.refreshToken);
+    saveStoredSession(payload);
     setAccessToken(payload.accessToken);
     setUser(payload.user);
     setMessage(`Welcome, ${payload.user.name}`);
   }
   function signOut() {
-    localStorage.removeItem("tms-user");
-    localStorage.removeItem("tms-access");
-    localStorage.removeItem("tms-refresh");
+    clearStoredSession();
     setUser(null);
     setAccessToken("");
     setQuote(null);
