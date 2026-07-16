@@ -1,5 +1,5 @@
 import { AppError } from "../../common/errors/app-error";
-import { BookingStatus, Role, VehicleStatus } from "../../generated/prisma/client";
+import { Role, VehicleStatus } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { signedDocumentUrl } from "../../lib/storage";
 import { calculateFare } from "../../services/fare";
