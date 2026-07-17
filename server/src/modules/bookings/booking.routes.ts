@@ -10,6 +10,8 @@ import {
     deliverBookingHandler,
     departBookingHandler,
     getBookingDocumentHandler,
+    getAdminBookingDetailHandler,
+    listAdminBookings,
     listMyBookings,
 } from "./booking.controller";
 
@@ -21,9 +23,12 @@ bookingRouter.post("/", authenticate, allow(Role.CUSTOMER), asyncHandler(createB
 bookingRouter.get("/mine", authenticate, asyncHandler(listMyBookings));
 bookingRouter.get("/:id/documents/:kind", authenticate, asyncHandler(getBookingDocumentHandler));
 
-adminBookingRouter.post("/:id/confirm", authenticate, allow(Role.ADMIN), asyncHandler(confirmBookingHandler));
-adminBookingRouter.post("/:id/depart", authenticate, allow(Role.ADMIN), asyncHandler(departBookingHandler));
-adminBookingRouter.post("/:id/close", authenticate, allow(Role.ADMIN), asyncHandler(closeBookingHandler));
-adminBookingRouter.post("/:id/cancel", authenticate, allow(Role.ADMIN), asyncHandler(cancelBookingHandler));
+adminBookingRouter.use(authenticate, allow(Role.ADMIN));
+adminBookingRouter.get("/", asyncHandler(listAdminBookings));
+adminBookingRouter.get("/:id", asyncHandler(getAdminBookingDetailHandler));
+adminBookingRouter.post("/:id/confirm", asyncHandler(confirmBookingHandler));
+adminBookingRouter.post("/:id/depart", asyncHandler(departBookingHandler));
+adminBookingRouter.post("/:id/close", asyncHandler(closeBookingHandler));
+adminBookingRouter.post("/:id/cancel", asyncHandler(cancelBookingHandler));
 
 driverBookingRouter.post("/:id/deliver", authenticate, allow(Role.DRIVER), asyncHandler(deliverBookingHandler));

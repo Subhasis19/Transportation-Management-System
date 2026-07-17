@@ -35,8 +35,18 @@ export const bookingDocumentParamsSchema = z.object({
     kind: z.string(),
 });
 
+export const adminBookingQuerySchema = z.object({
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+    search: z.string().trim().default(""),
+    status: z
+        .enum(["all", "PENDING", "CONFIRMED", "IN_TRANSIT", "DELIVERED", "INVOICED", "CLOSED", "CANCELLED"])
+        .default("all"),
+});
+
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 export type ConfirmBookingInput = z.infer<typeof confirmBookingSchema>;
 export type DeliverBookingInput = z.infer<typeof deliverBookingSchema>;
 export type CancelBookingInput = z.infer<typeof cancelBookingSchema>;
 export type BookingDocumentParams = z.infer<typeof bookingDocumentParamsSchema>;
+export type AdminBookingQuery = z.infer<typeof adminBookingQuerySchema>;

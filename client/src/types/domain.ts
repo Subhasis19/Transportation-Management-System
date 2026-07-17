@@ -238,6 +238,29 @@ export type AdminUserDetail = AdminUser & {
   recentBookings: AdminUserRecentBooking[];
 };
 
+export type AdminBookingListItem = {
+  id: string; status: BookingStatus; pickupAt: string; materialDescription: string;
+  weightKg: number; estimatedFare: number;
+  customer: { id: string; name: string; email: string; phone: string };
+  driver: { id: string; name: string } | null;
+  vehicle: { id: string; regNumber: string; vehicleType: string; status: VehicleStatus };
+  fromLocation: Location; toLocation: Location; lrNumber: string | null;
+  invoiceNumber: string | null; hasLrDocument: boolean; hasInvoiceDocument: boolean;
+  createdAt: string; updatedAt: string;
+};
+export type AdminBookingListResponse = { items: AdminBookingListItem[]; total: number; page: number; limit: number };
+export type AdminBookingDetail = AdminBookingListItem & {
+  viaRoute: string | null; consignorName: string; consigneeName: string; declaredValue: number;
+  distanceKm: number; baseFare: number; distanceCharge: number; tollAmount: number;
+  gstPercent: number; gstAmount: number; cancellationReason: string | null; cancelledAt: string | null;
+  lrGeneratedAt: string | null; deliveryTime: string | null; deliveryNotes: string | null;
+  invoiceGeneratedAt: string | null;
+  customer: AdminBookingListItem["customer"] & { isActive: boolean };
+  driver: { id: string; name: string; email: string; phone: string; licenseNumber: string | null; licenseExpiry: string | null; isActive: boolean } | null;
+  vehicle: AdminBookingListItem["vehicle"] & { capacityKg: number; rcExpiry: string; permitExpiry: string };
+};
+export type BookingDocumentResponse = { url: string };
+
 export type Dashboard = {
   vehicles: Array<{ status: VehicleStatus; _count: number }>;
   revenueThisMonth: number;

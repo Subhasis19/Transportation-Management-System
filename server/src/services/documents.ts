@@ -21,17 +21,43 @@ function renderPdf(title: string, rows: Array<[string, string]>) {
     doc.on("error", reject);
     doc.fontSize(20).text("TruckLine TMS", { align: "center" });
     doc.moveDown().fontSize(16).text(title).moveDown();
-    rows.forEach(([label, value]) => doc.fontSize(10).fillColor("#475569").text(label).fillColor("#0f172a").fontSize(12).text(value).moveDown(0.5));
+    rows.forEach(([label, value]) =>
+      doc
+        .fontSize(10)
+        .fillColor("#475569")
+        .text(label)
+        .fillColor("#0f172a")
+        .fontSize(12)
+        .text(value)
+        .moveDown(0.5),
+    );
     doc.end();
   });
 }
 
 export async function createLorryReceipt(booking: Booking, vehicleReg: string) {
-  const pdf = await renderPdf("Lorry Receipt", [["LR Number", booking.lrNumber || "Pending"], ["Booking", booking.id], ["Vehicle", vehicleReg], ["Consignor", booking.consignorName], ["Consignee", booking.consigneeName], ["Material", booking.materialDescription], ["Weight", `${booking.weightKg} kg`], ["Distance", `${booking.distanceKm} km`]]);
+  const pdf = await renderPdf("Lorry Receipt", [
+    ["LR Number", booking.lrNumber || "Pending"],
+    ["Booking", booking.id],
+    ["Vehicle", vehicleReg],
+    ["Consignor", booking.consignorName],
+    ["Consignee", booking.consigneeName],
+    ["Material", booking.materialDescription],
+    ["Weight", `${booking.weightKg} kg`],
+    ["Distance", `${booking.distanceKm} km`],
+  ]);
   return uploadGeneratedBookingDocument(`lr/${booking.id}.pdf`, pdf);
 }
 
 export async function createInvoice(booking: Booking) {
-  const pdf = await renderPdf("Tax Invoice", [["Invoice Number", booking.invoiceNumber || "Pending"], ["Booking", booking.id], ["Base fare", `INR ${booking.baseFare}`], ["Distance charge", `INR ${booking.distanceCharge}`], ["Toll", `INR ${booking.tollAmount}`], ["GST", `INR ${booking.gstAmount}`], ["Total", `INR ${booking.estimatedFare}`]]);
+  const pdf = await renderPdf("Tax Invoice", [
+    ["Invoice Number", booking.invoiceNumber || "Pending"],
+    ["Booking", booking.id],
+    ["Base fare", `INR ${booking.baseFare}`],
+    ["Distance charge", `INR ${booking.distanceCharge}`],
+    ["Toll", `INR ${booking.tollAmount}`],
+    ["GST", `INR ${booking.gstAmount}`],
+    ["Total", `INR ${booking.estimatedFare}`],
+  ]);
   return uploadGeneratedBookingDocument(`invoices/${booking.id}.pdf`, pdf);
 }
