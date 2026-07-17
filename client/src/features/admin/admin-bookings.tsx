@@ -3,10 +3,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ApiRequest } from "@/lib/api-client";
-import type { Booking, DriverOption, Report } from "@/types/domain";
+import type {
+  Booking,
+  DashboardRecentBooking,
+  DriverOption,
+  Report,
+} from "@/types/domain";
 
 type AdminBookingsProps = {
-  bookings: Booking[];
+  bookings: DashboardRecentBooking[];
   request: ApiRequest;
   report: Report;
   refresh: () => Promise<void>;
@@ -19,7 +24,9 @@ export function AdminBookings({
   refresh,
 }: AdminBookingsProps) {
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
-  const [driverSelections, setDriverSelections] = useState<Record<string, string>>({});
+  const [driverSelections, setDriverSelections] = useState<
+    Record<string, string>
+  >({});
   useEffect(() => {
     let isCurrent = true;
     void request<DriverOption[]>("/admin/drivers/options")
@@ -42,28 +49,23 @@ export function AdminBookings({
     setDrivers(driverData);
   };
 
-  const act = async (
-    id: string,
-    action: "confirm" | "depart" | "close",
-  ) => {
+  const act = async (id: string, action: "confirm" | "depart" | "close") => {
     try {
       const driverId = driverSelections[id];
       if (action === "confirm" && !driverId)
         throw new Error("Select an eligible driver first");
       await request<Booking>(`/admin/bookings/${id}/${action}`, {
         method: "POST",
-        body: JSON.stringify(
-          action === "confirm"
-            ? { driverId }
-            : {},
-        ),
+        body: JSON.stringify(action === "confirm" ? { driverId } : {}),
       });
       report(
-        `Booking ${{
-          confirm: "confirmed",
-          depart: "departed",
-          close: "closed",
-        }[action]}`,
+        `Booking ${
+          {
+            confirm: "confirmed",
+            depart: "departed",
+            close: "closed",
+          }[action]
+        }`,
       );
       await refresh();
       if (action === "confirm") await loadDriverOptions();

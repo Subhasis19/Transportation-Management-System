@@ -140,11 +140,7 @@ export type Booking = {
   toLocation: Location;
 };
 
-export type DriverLicenseStatus =
-  | "VALID"
-  | "EXPIRING"
-  | "EXPIRED"
-  | "MISSING";
+export type DriverLicenseStatus = "VALID" | "EXPIRING" | "EXPIRED" | "MISSING";
 
 export type AdminDriverActiveAssignment = {
   id: string;
@@ -239,38 +235,131 @@ export type AdminUserDetail = AdminUser & {
 };
 
 export type AdminBookingListItem = {
-  id: string; status: BookingStatus; pickupAt: string; materialDescription: string;
-  weightKg: number; estimatedFare: number;
+  id: string;
+  status: BookingStatus;
+  pickupAt: string;
+  materialDescription: string;
+  weightKg: number;
+  estimatedFare: number;
   customer: { id: string; name: string; email: string; phone: string };
   driver: { id: string; name: string } | null;
-  vehicle: { id: string; regNumber: string; vehicleType: string; status: VehicleStatus };
-  fromLocation: Location; toLocation: Location; lrNumber: string | null;
-  invoiceNumber: string | null; hasLrDocument: boolean; hasInvoiceDocument: boolean;
-  createdAt: string; updatedAt: string;
+  vehicle: {
+    id: string;
+    regNumber: string;
+    vehicleType: string;
+    status: VehicleStatus;
+  };
+  fromLocation: Location;
+  toLocation: Location;
+  lrNumber: string | null;
+  invoiceNumber: string | null;
+  hasLrDocument: boolean;
+  hasInvoiceDocument: boolean;
+  createdAt: string;
+  updatedAt: string;
 };
-export type AdminBookingListResponse = { items: AdminBookingListItem[]; total: number; page: number; limit: number };
+export type AdminBookingListResponse = {
+  items: AdminBookingListItem[];
+  total: number;
+  page: number;
+  limit: number;
+};
 export type AdminBookingDetail = AdminBookingListItem & {
-  viaRoute: string | null; consignorName: string; consigneeName: string; declaredValue: number;
-  distanceKm: number; baseFare: number; distanceCharge: number; tollAmount: number;
-  gstPercent: number; gstAmount: number; cancellationReason: string | null; cancelledAt: string | null;
-  lrGeneratedAt: string | null; deliveryTime: string | null; deliveryNotes: string | null;
+  viaRoute: string | null;
+  consignorName: string;
+  consigneeName: string;
+  declaredValue: number;
+  distanceKm: number;
+  baseFare: number;
+  distanceCharge: number;
+  tollAmount: number;
+  gstPercent: number;
+  gstAmount: number;
+  cancellationReason: string | null;
+  cancelledAt: string | null;
+  lrGeneratedAt: string | null;
+  deliveryTime: string | null;
+  deliveryNotes: string | null;
   invoiceGeneratedAt: string | null;
   customer: AdminBookingListItem["customer"] & { isActive: boolean };
-  driver: { id: string; name: string; email: string; phone: string; licenseNumber: string | null; licenseExpiry: string | null; isActive: boolean } | null;
-  vehicle: AdminBookingListItem["vehicle"] & { capacityKg: number; rcExpiry: string; permitExpiry: string };
+  driver: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    licenseNumber: string | null;
+    licenseExpiry: string | null;
+    isActive: boolean;
+  } | null;
+  vehicle: AdminBookingListItem["vehicle"] & {
+    capacityKg: number;
+    rcExpiry: string;
+    permitExpiry: string;
+  };
 };
 export type BookingDocumentResponse = { url: string };
 
+export type DashboardVehicleDocumentAlert = {
+  id: string;
+  regNumber: string;
+  status: VehicleStatus;
+  rcExpiry: string;
+  permitExpiry: string;
+  documentStatus: "EXPIRING" | "EXPIRED";
+};
+export type DashboardDriverLicenseAlert = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  licenseNumber: string | null;
+  licenseExpiry: string | null;
+  licenseStatus: "EXPIRING" | "EXPIRED" | "MISSING";
+};
+export type DashboardRecentBooking = {
+  id: string;
+  status: BookingStatus;
+  materialDescription: string;
+  estimatedFare: number;
+  pickupAt: string;
+  createdAt: string;
+  customer: { id: string; name: string };
+  driver: { id: string; name: string } | null;
+  vehicle: { id: string; regNumber: string };
+  fromLocation: Location;
+  toLocation: Location;
+};
 export type Dashboard = {
-  vehicles: Array<{ status: VehicleStatus; _count: number }>;
-  revenueThisMonth: number;
-  expiringDocuments: Array<{
-    id: string;
-    regNumber: string;
-    rcExpiry: string;
-    permitExpiry: string;
-  }>;
-  recentBookings: Booking[];
+  generatedAt: string;
+  users: {
+    customers: number;
+    enabledAccounts: number;
+    recentlyActiveAccounts: number;
+  };
+  drivers: { total: number; enabled: number; eligibleForAssignment: number };
+  vehicles: {
+    total: number;
+    available: number;
+    quoteReady: number;
+    reserved: number;
+    onTrip: number;
+    maintenance: number;
+    breakdown: number;
+  };
+  bookings: {
+    total: number;
+    pending: number;
+    active: number;
+    confirmed: number;
+    inTransit: number;
+    delivered: number;
+    invoiced: number;
+    closed: number;
+    cancelled: number;
+  };
+  monthlyBookingValue: number;
+  vehicleDocumentAlerts: DashboardVehicleDocumentAlert[];
+  driverLicenseAlerts: DashboardDriverLicenseAlert[];
+  recentBookings: DashboardRecentBooking[];
 };
 
 export type WorkspaceData =
