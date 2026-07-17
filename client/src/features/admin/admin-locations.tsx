@@ -26,7 +26,15 @@ export function AdminLocations({ request, report }: AdminLocationsProps) {
   const requestId = useRef(0);
   const controller = useRef<AbortController | null>(null);
 
-  useEffect(() => () => { mounted.current = false; controller.current?.abort(); }, []);
+  useEffect(() => {
+    mounted.current = true;
+
+    return () => {
+      mounted.current = false;
+      requestId.current += 1;
+      controller.current?.abort();
+    };
+  }, []);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -34,20 +42,30 @@ export function AdminLocations({ request, report }: AdminLocationsProps) {
   }, [search]);
 
   const loadLocations = useCallback(async (nextSearch: string, nextStatus: StatusFilter) => {
+    if (!mounted.current) return;
+
     controller.current?.abort();
     const nextController = new AbortController();
     controller.current = nextController;
     const currentRequest = ++requestId.current;
     const params = new URLSearchParams({ status: nextStatus });
     if (nextSearch) params.set("search", nextSearch);
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
       const result = await request<AdminLocationListResponse>(`/admin/locations?${params.toString()}`, { signal: nextController.signal });
-      if (mounted.current && currentRequest === requestId.current) { setData(result); setError(null); }
+      if (mounted.current && currentRequest === requestId.current) {
+        setData(result);
+        setError(null);
+      }
     } catch (cause) {
-      if (mounted.current && !nextController.signal.aborted && currentRequest === requestId.current) setError(message(cause));
+      if (mounted.current && !nextController.signal.aborted && currentRequest === requestId.current) {
+        setError(message(cause));
+      }
     } finally {
-      if (mounted.current && currentRequest === requestId.current) setLoading(false);
+      if (mounted.current && currentRequest === requestId.current) {
+        setLoading(false);
+      }
     }
   }, [request]);
 
@@ -61,16 +79,26 @@ export function AdminLocations({ request, report }: AdminLocationsProps) {
   const save = async () => {
     if (!form || saving) return;
     const cityName = normalize(form.cityName);
-    if (cityName.length < 2 || cityName.length > 100) { setFormError("City name must be between 2 and 100 characters."); return; }
-    setSaving(true); setFormError(null);
+    if (cityName.length < 2 || cityName.length > 100) {
+      setFormError("City name must be between 2 and 100 characters.");
+      return;
+    }
+    setSaving(true);
+    setFormError(null);
     try {
       const location = form.location;
       await request<AdminLocation>(location ? `/admin/locations/${location.id}` : "/admin/locations", {
         method: location ? "PATCH" : "POST", body: JSON.stringify({ cityName }),
       });
-      report(location ? "Location updated" : "Location created"); if (mounted.current) setForm(null); await refresh();
-    } catch (cause) { if (mounted.current) setFormError(message(cause)); }
-    finally { if (mounted.current) setSaving(false); }
+      if (!mounted.current) return;
+      report(location ? "Location updated" : "Location created");
+      setForm(null);
+      await refresh();
+    } catch (cause) {
+      if (mounted.current) setFormError(message(cause));
+    } finally {
+      if (mounted.current) setSaving(false);
+    }
   };
 
   const updateStatus = async () => {
@@ -78,9 +106,15 @@ export function AdminLocations({ request, report }: AdminLocationsProps) {
     setSaving(true);
     try {
       await request<AdminLocation>(`/admin/locations/${confirmation.id}/status`, { method: "PATCH", body: JSON.stringify({ isActive: !confirmation.isActive }) });
-      report(`Location ${confirmation.isActive ? "deactivated" : "activated"}`); if (mounted.current) setConfirmation(null); await refresh();
-    } catch (cause) { if (mounted.current) setError(message(cause)); }
-    finally { if (mounted.current) setSaving(false); }
+      if (!mounted.current) return;
+      report(`Location ${confirmation.isActive ? "deactivated" : "activated"}`);
+      setConfirmation(null);
+      await refresh();
+    } catch (cause) {
+      if (mounted.current) setError(message(cause));
+    } finally {
+      if (mounted.current) setSaving(false);
+    }
   };
 
   const clear = () => { setSearch(""); setStatus("all"); };
