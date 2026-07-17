@@ -8,17 +8,24 @@ on:
 jobs:
   server:
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/tms_ci
+    
     defaults:
       run:
         working-directory: server
+
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: server/package-lock.json
       - run: npm ci
+      - run: npm run generate
       - run: npm test
       - run: npm run test:fare
       - run: npm run build
