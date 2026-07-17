@@ -2,6 +2,7 @@ import { AppError } from "../../common/errors/app-error";
 import { Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import type { AdminLocationQuery, CreateLocationInput, UpdateLocationInput, UpdateLocationStatusInput } from "./location.schema";
+import { buildAdminLocationWhere } from "./location.rules";
 
 const adminLocationSelect = {
   id: true,
@@ -15,6 +16,21 @@ function isUniqueConflict(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }
 
+function isTransactionConflict(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+}
+
+async function withSerializableRetry<T>(operation: () => Promise<T>): Promise<T> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try { return await operation(); }
+    catch (error) {
+      if (!isTransactionConflict(error)) throw error;
+      if (attempt === 3) throw new AppError(409, "Location already exists");
+    }
+  }
+  throw new AppError(409, "Location already exists");
+}
+
 export async function getActiveLocations() {
   return prisma.location.findMany({
     where: { isActive: true },
@@ -24,29 +40,17 @@ export async function getActiveLocations() {
 }
 
 export async function getAdminLocations(query: AdminLocationQuery) {
-  const where = {
-    ...(query.search ? { cityName: { contains: query.search, mode: "insensitive" as const } } : {}),
-    ...(query.status === "all" ? {} : { isActive: query.status === "active" }),
-  };
-  const items = await prisma.location.findMany({ where, select: adminLocationSelect, orderBy: { cityName: "asc" } });
+  const items = await prisma.location.findMany({ where: buildAdminLocationWhere(query), select: adminLocationSelect, orderBy: { cityName: "asc" } });
   return { items, total: items.length };
 }
 
-async function ensureNoDuplicate(cityName: string, exceptId?: string) {
-  const existing = await prisma.location.findFirst({
-    where: {
-      cityName: { equals: cityName, mode: "insensitive" },
-      ...(exceptId ? { id: { not: exceptId } } : {}),
-    },
-    select: { id: true },
-  });
-  if (existing) throw new AppError(409, "Location already exists");
-}
-
 export async function createLocation(input: CreateLocationInput) {
-  await ensureNoDuplicate(input.cityName);
   try {
-    return await prisma.location.create({ data: { cityName: input.cityName }, select: adminLocationSelect });
+    return await withSerializableRetry(() => prisma.$transaction(async (tx) => {
+      const existing = await tx.location.findFirst({ where: { cityName: { equals: input.cityName, mode: "insensitive" } }, select: { id: true } });
+      if (existing) throw new AppError(409, "Location already exists");
+      return tx.location.create({ data: { cityName: input.cityName }, select: adminLocationSelect });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
   } catch (error) {
     if (isUniqueConflict(error)) throw new AppError(409, "Location already exists");
     throw error;
@@ -54,11 +58,17 @@ export async function createLocation(input: CreateLocationInput) {
 }
 
 export async function updateLocation(locationId: string, input: UpdateLocationInput) {
-  const current = await prisma.location.findUnique({ where: { id: locationId }, select: { id: true } });
-  if (!current) throw new AppError(404, "Location not found");
-  await ensureNoDuplicate(input.cityName, locationId);
   try {
-    return await prisma.location.update({ where: { id: locationId }, data: { cityName: input.cityName }, select: adminLocationSelect });
+    return await withSerializableRetry(() => prisma.$transaction(async (tx) => {
+      const current = await tx.location.findUnique({ where: { id: locationId }, select: { id: true } });
+      if (!current) throw new AppError(404, "Location not found");
+      const existing = await tx.location.findFirst({
+        where: { cityName: { equals: input.cityName, mode: "insensitive" }, id: { not: locationId } },
+        select: { id: true },
+      });
+      if (existing) throw new AppError(409, "Location already exists");
+      return tx.location.update({ where: { id: locationId }, data: { cityName: input.cityName }, select: adminLocationSelect });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }));
   } catch (error) {
     if (isUniqueConflict(error)) throw new AppError(409, "Location already exists");
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {

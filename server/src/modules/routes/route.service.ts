@@ -2,6 +2,7 @@ import { AppError } from "../../common/errors/app-error";
 import { VehicleStatus } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 import { calculateFare } from "../../services/fare";
+import { buildUsableRouteWhere, toPublicQuoteRoute } from "./route.rules";
 import type { CreateRouteInput, QuoteQueryInput } from "./route.schema";
 
 export async function getQuote(input: QuoteQueryInput) {
@@ -10,12 +11,7 @@ export async function getQuote(input: QuoteQueryInput) {
     }
 
     const route = await prisma.route.findFirst({
-        where: {
-            fromLocationId: input.fromLocationId,
-            toLocationId: input.toLocationId,
-            fromLocation: { isActive: true },
-            toLocation: { isActive: true },
-        },
+        where: buildUsableRouteWhere(input.fromLocationId, input.toLocationId),
     });
 
     if (!route) {
@@ -33,11 +29,7 @@ export async function getQuote(input: QuoteQueryInput) {
     });
 
     return {
-        route: {
-            ...route,
-            distanceKm: Number(route.distanceKm),
-            tollAmount: Number(route.tollAmount),
-        },
+        route: toPublicQuoteRoute(route),
         options: vehicles.map((vehicle) => ({
             vehicle: {
                 id: vehicle.id,

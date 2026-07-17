@@ -6,16 +6,12 @@ import { calculateFare } from "../../services/fare";
 import type { CreateBookingInput } from "./booking.schema";
 import { bookingInclude, isVehicleCompliant } from "./booking.shared";
 import { isWeightWithinVehicleCapacity } from "./booking.rules";
+import { buildUsableRouteWhere } from "../routes/route.rules";
 
 export async function createBooking(customerId: string, input: CreateBookingInput) {
     return prisma.$transaction(async (tx) => {
         const route = await tx.route.findFirst({
-            where: {
-                fromLocationId: input.fromLocationId,
-                toLocationId: input.toLocationId,
-                fromLocation: { isActive: true },
-                toLocation: { isActive: true },
-            },
+            where: buildUsableRouteWhere(input.fromLocationId, input.toLocationId),
         });
 
         if (!route) {

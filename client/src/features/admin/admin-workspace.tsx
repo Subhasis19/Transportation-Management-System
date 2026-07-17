@@ -24,10 +24,23 @@ export function AdminWorkspace({
   const statusMap = new Map(
     dashboard?.vehicles.map(({ status, _count }) => [status, _count]),
   );
-  if (view === "locations") return <div className="space-y-4"><div className="flex gap-2"><Button variant="outline" onClick={() => setView("overview")}>Overview</Button><Button>Locations</Button></div><AdminLocations request={request} report={report} /></div>;
+  if (view === "locations") {
+    return (
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setView("overview")}>Overview</Button>
+          <Button>Locations</Button>
+        </div>
+        <AdminLocations request={request} report={report} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-7">
-      <div className="flex gap-2"><Button>Overview</Button><Button variant="outline" onClick={() => setView("locations")}>Locations</Button></div>
+      <div className="flex gap-2">
+        <Button>Overview</Button>
+        <Button variant="outline" onClick={() => setView("locations")}>Locations</Button>
+      </div>
       <section>
         <p className="font-heading text-xs font-semibold tracking-[0.2em] text-indigo-600">
           ADMIN CONTROL CENTRE
