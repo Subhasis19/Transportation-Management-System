@@ -3,14 +3,16 @@ import { uuidSchema } from "../../common/schemas/common.schema";
 import { hasAtMostTwoDecimalPlaces } from "./route.rules";
 
 const normalizeRouteNumericValue = (value: unknown) => {
-  if (
-    typeof value === "boolean" ||
-    (typeof value === "string" && value.trim() === "")
-  ) {
-    return Number.NaN;
+  if (typeof value === "number") {
+    return value;
   }
 
-  return value;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed === "" ? Number.NaN : trimmed;
+  }
+
+  return Number.NaN;
 };
 
 const routeDistanceSchema = z.preprocess(

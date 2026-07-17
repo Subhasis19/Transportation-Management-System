@@ -124,26 +124,41 @@ test("route creation preserves numeric coercion and rejects non-finite values", 
   );
 });
 
-test("route numeric inputs reject blanks and booleans while preserving zero toll", () => {
+test("route creation rejects non-numeric input types and preserves numeric strings", () => {
   for (const input of [
     { distanceKm: "" },
     { tollAmount: "" },
     { tollAmount: "   " },
     { distanceKm: false },
     { tollAmount: false },
+    { tollAmount: null },
+    { tollAmount: [] },
+    { tollAmount: ["12.5"] },
+    { distanceKm: null },
+    { distanceKm: [12.5] },
+    { distanceKm: {} },
   ]) {
-    assert.equal(createRouteSchema.safeParse({ ...validRoute, ...input }).success, false);
+    assert.equal(
+      createRouteSchema.safeParse({ ...validRoute, ...input }).success,
+      false,
+    );
   }
 
-  const result = createRouteSchema.safeParse({
+  const numericZero = createRouteSchema.safeParse({
+    ...validRoute,
+    tollAmount: 0,
+  });
+  assert.equal(numericZero.success, true);
+
+  const stringValues = createRouteSchema.safeParse({
     ...validRoute,
     distanceKm: "12.50",
     tollAmount: "0",
   });
-  assert.equal(result.success, true);
-  if (result.success) {
-    assert.equal(result.data.distanceKm, 12.5);
-    assert.equal(result.data.tollAmount, 0);
+  assert.equal(stringValues.success, true);
+  if (stringValues.success) {
+    assert.equal(stringValues.data.distanceKm, 12.5);
+    assert.equal(stringValues.data.tollAmount, 0);
   }
 });
 
@@ -162,9 +177,23 @@ test("route updates accept partial values and reject empty or unknown input", ()
   );
   assert.equal(updateRouteSchema.safeParse({ distanceKm: "" }).success, false);
   assert.equal(updateRouteSchema.safeParse({ tollAmount: false }).success, false);
+  for (const input of [
+    { tollAmount: null },
+    { tollAmount: [] },
+    { tollAmount: ["12.5"] },
+    { distanceKm: null },
+    { distanceKm: [12.5] },
+    { distanceKm: {} },
+  ]) {
+    assert.equal(updateRouteSchema.safeParse(input).success, false);
+  }
   assert.deepEqual(updateRouteSchema.parse({ tollAmount: "0" }), {
     tollAmount: 0,
   });
+  assert.deepEqual(
+    updateRouteSchema.parse({ distanceKm: "12.5", tollAmount: 0.29 }),
+    { distanceKm: 12.5, tollAmount: 0.29 },
+  );
 });
 
 test("route parameters and status input are strict", () => {
