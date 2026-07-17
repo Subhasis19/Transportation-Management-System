@@ -11,6 +11,7 @@ import { AdminBookings } from "@/features/admin/admin-bookings";
 import { AdminLocations } from "@/features/admin/admin-locations";
 import { AdminPricing } from "@/features/admin/admin-pricing";
 import { AdminRoutes } from "@/features/admin/admin-routes";
+import { AdminVehicles } from "@/features/admin/admin-vehicles";
 import { currency } from "@/lib/formatters";
 import type { ApiRequest } from "@/lib/api-client";
 import type { Dashboard, Report } from "@/types/domain";
@@ -29,7 +30,7 @@ export function AdminWorkspace({
   refresh,
 }: AdminWorkspaceProps) {
   const [view, setView] = useState<
-    "overview" | "locations" | "routes" | "pricing"
+    "overview" | "locations" | "routes" | "pricing" | "vehicles"
   >("overview");
   const statusMap = new Map(
     dashboard?.vehicles.map(({ status, _count }) => [status, _count]),
@@ -47,6 +48,9 @@ export function AdminWorkspace({
           </Button>
           <Button variant="outline" onClick={() => setView("pricing")}>
             Pricing
+          </Button>
+          <Button variant="outline" onClick={() => setView("vehicles")}>
+            Vehicles
           </Button>
         </div>
         <AdminLocations request={request} report={report} />
@@ -67,6 +71,9 @@ export function AdminWorkspace({
           <Button variant="outline" onClick={() => setView("pricing")}>
             Pricing
           </Button>
+          <Button variant="outline" onClick={() => setView("vehicles")}>
+            Vehicles
+          </Button>
         </div>
         <AdminRoutes request={request} report={report} />
       </div>
@@ -85,8 +92,32 @@ export function AdminWorkspace({
             Routes
           </Button>
           <Button>Pricing</Button>
+          <Button variant="outline" onClick={() => setView("vehicles")}>
+            Vehicles
+          </Button>
         </div>
         <AdminPricing request={request} report={report} />
+      </div>
+    );
+  if (view === "vehicles")
+    return (
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setView("overview")}>
+            Overview
+          </Button>
+          <Button variant="outline" onClick={() => setView("locations")}>
+            Locations
+          </Button>
+          <Button variant="outline" onClick={() => setView("routes")}>
+            Routes
+          </Button>
+          <Button variant="outline" onClick={() => setView("pricing")}>
+            Pricing
+          </Button>
+          <Button>Vehicles</Button>
+        </div>
+        <AdminVehicles request={request} report={report} />
       </div>
     );
   return (
@@ -101,6 +132,9 @@ export function AdminWorkspace({
         </Button>
         <Button variant="outline" onClick={() => setView("pricing")}>
           Pricing
+        </Button>
+        <Button variant="outline" onClick={() => setView("vehicles")}>
+          Vehicles
         </Button>
       </div>
       <section>

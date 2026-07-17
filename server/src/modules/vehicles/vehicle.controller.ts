@@ -1,18 +1,37 @@
 import type { Request, Response } from "express";
-import { createVehicleSchema, updateVehicleSchema, vehicleIdParamsSchema } from "./vehicle.schema";
-import { createVehicle, getVehicles, updateVehicle } from "./vehicle.service";
+import {
+    adminVehicleQuerySchema,
+    createVehicleSchema,
+    updateVehicleSchema,
+    updateVehicleStatusSchema,
+    vehicleIdParamsSchema,
+} from "./vehicle.schema";
+import {
+    createVehicle,
+    getVehicles,
+    updateVehicle,
+    updateVehicleStatus,
+} from "./vehicle.service";
 
-export async function listVehicles(_req: Request, res: Response) {
-    res.json(await getVehicles());
+export async function listVehicles(req: Request, res: Response) {
+    res.json(await getVehicles(adminVehicleQuerySchema.parse(req.query)));
 }
 
 export async function createVehicleHandler(req: Request, res: Response) {
-    const input = createVehicleSchema.parse(req.body);
-    res.status(201).json(await createVehicle(input));
+    res.status(201).json(await createVehicle(createVehicleSchema.parse(req.body)));
 }
 
 export async function updateVehicleHandler(req: Request, res: Response) {
-    const { id } = vehicleIdParamsSchema.parse(req.params);
-    const input = updateVehicleSchema.parse(req.body);
-    res.json(await updateVehicle(id, input));
+    const { vehicleId } = vehicleIdParamsSchema.parse(req.params);
+    res.json(await updateVehicle(vehicleId, updateVehicleSchema.parse(req.body)));
+}
+
+export async function updateVehicleStatusHandler(req: Request, res: Response) {
+    const { vehicleId } = vehicleIdParamsSchema.parse(req.params);
+    res.json(
+        await updateVehicleStatus(
+            vehicleId,
+            updateVehicleStatusSchema.parse(req.body),
+        ),
+    );
 }

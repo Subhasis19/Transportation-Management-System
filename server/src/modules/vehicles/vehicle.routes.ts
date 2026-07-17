@@ -6,20 +6,16 @@ import {
     createVehicleHandler,
     listVehicles,
     updateVehicleHandler,
+    updateVehicleStatusHandler,
 } from "./vehicle.controller";
 
 export const adminVehicleRouter = Router();
 
-adminVehicleRouter.get("/", authenticate, allow(Role.ADMIN), asyncHandler(listVehicles));
-adminVehicleRouter.post(
-    "/",
-    authenticate,
-    allow(Role.ADMIN),
-    asyncHandler(createVehicleHandler),
-);
+adminVehicleRouter.use(authenticate, allow(Role.ADMIN));
+adminVehicleRouter.get("/", asyncHandler(listVehicles));
+adminVehicleRouter.post("/", asyncHandler(createVehicleHandler));
+adminVehicleRouter.patch("/:vehicleId", asyncHandler(updateVehicleHandler));
 adminVehicleRouter.patch(
-    "/:id",
-    authenticate,
-    allow(Role.ADMIN),
-    asyncHandler(updateVehicleHandler),
+    "/:vehicleId/status",
+    asyncHandler(updateVehicleStatusHandler),
 );

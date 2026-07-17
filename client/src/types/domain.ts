@@ -72,6 +72,36 @@ export type AdminRateCard = {
   updatedAt: string;
 };
 
+export type VehicleDocumentStatus = "VALID" | "EXPIRING" | "EXPIRED";
+
+export type AdminVehicleActiveBooking = {
+  id: string;
+  status: "PENDING" | "CONFIRMED" | "IN_TRANSIT" | "INVOICED";
+};
+
+export type AdminVehicle = {
+  id: string;
+  regNumber: string;
+  vehicleType: VehicleType;
+  capacityKg: number;
+  status: VehicleStatus;
+  rcNumber: string;
+  rcExpiry: string;
+  permitNumber: string;
+  permitExpiry: string;
+  documentStatus: VehicleDocumentStatus;
+  activeBooking: AdminVehicleActiveBooking | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminVehicleListResponse = {
+  items: AdminVehicle[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 export type Quote = {
   route: { distanceKm: number; tollAmount: number };
   options: Array<{
