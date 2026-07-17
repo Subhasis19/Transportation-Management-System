@@ -1,5 +1,11 @@
 import type { Prisma } from "../../generated/prisma/client";
 
+export function hasAtMostTwoDecimalPlaces(value: number): boolean {
+  const scaled = value * 100;
+  const tolerance = Number.EPSILON * Math.max(1, Math.abs(scaled)) * 8;
+  return Math.abs(scaled - Math.round(scaled)) <= tolerance;
+}
+
 export function buildUsableRouteWhere(
   fromLocationId: string,
   toLocationId: string,

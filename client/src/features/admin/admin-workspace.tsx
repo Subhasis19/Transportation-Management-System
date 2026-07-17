@@ -41,6 +41,9 @@ export function AdminWorkspace({
             Overview
           </Button>
           <Button>Locations</Button>
+          <Button variant="outline" onClick={() => setView("routes")}>
+            Routes
+          </Button>
         </div>
         <AdminLocations request={request} report={report} />
       </div>

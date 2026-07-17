@@ -32,8 +32,29 @@ export type AdminLocationListResponse = {
   items: AdminLocation[];
   total: number;
 };
-export type AdminRoute = { id: string; fromLocationId: string; toLocationId: string; fromLocation: Pick<AdminLocation, "id" | "cityName" | "isActive">; toLocation: Pick<AdminLocation, "id" | "cityName" | "isActive">; distanceKm: number; tollAmount: number; isActive: boolean; createdAt: string; updatedAt: string };
-export type AdminRouteListResponse = { items: AdminRoute[]; total: number };
+
+export type AdminRouteLocation = Pick<
+  AdminLocation,
+  "id" | "cityName" | "isActive"
+>;
+
+export type AdminRoute = {
+  id: string;
+  fromLocationId: string;
+  toLocationId: string;
+  fromLocation: AdminRouteLocation;
+  toLocation: AdminRouteLocation;
+  distanceKm: number;
+  tollAmount: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminRouteListResponse = {
+  items: AdminRoute[];
+  total: number;
+};
 
 export type Quote = {
   route: { distanceKm: number; tollAmount: number };

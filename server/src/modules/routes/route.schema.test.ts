@@ -1,11 +1,24 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { createRouteSchema, quoteQuerySchema } from "./route.schema";
+import {
+  adminRouteQuerySchema,
+  createRouteSchema,
+  quoteQuerySchema,
+  routeParamsSchema,
+  updateRouteSchema,
+  updateRouteStatusSchema,
+} from "./route.schema";
 
 const fromLocationId = "11111111-1111-4111-8111-111111111111";
 const toLocationId = "22222222-2222-4222-8222-222222222222";
+const validRoute = {
+  fromLocationId,
+  toLocationId,
+  distanceKm: 1,
+  tollAmount: 0,
+};
 
-test("quote query accepts valid UUIDs", () => {
+test("quote query accepts valid UUIDs and rejects invalid UUIDs", () => {
   assert.equal(
     quoteQuerySchema.safeParse({ fromLocationId, toLocationId }).success,
     true,
@@ -17,35 +30,32 @@ test("quote query accepts valid UUIDs", () => {
   );
 });
 
-test("route creation accepts numeric strings and rejects matching endpoints", () => {
-  const result = createRouteSchema.safeParse({
-    fromLocationId,
-    toLocationId,
-    distanceKm: "148.5",
-    tollAmount: "280.25",
+test("admin route query applies defaults, trimming, and status filters", () => {
+  assert.deepEqual(adminRouteQuerySchema.parse({}), {
+    search: "",
+    status: "all",
   });
-
-  assert.equal(result.success, true);
-  if (!result.success) return;
-  assert.equal(result.data.distanceKm, 148.5);
-  assert.equal(result.data.tollAmount, 280.25);
+  assert.deepEqual(
+    adminRouteQuerySchema.parse({ search: "  Pune  ", status: "active" }),
+    { search: "Pune", status: "active" },
+  );
+  assert.deepEqual(adminRouteQuerySchema.parse({ status: "inactive" }), {
+    search: "",
+    status: "inactive",
+  });
   assert.equal(
-    createRouteSchema.safeParse({
-      ...result.data,
-      toLocationId: fromLocationId,
-    }).success,
+    adminRouteQuerySchema.safeParse({ status: "pending" }).success,
     false,
   );
 });
 
-test("route creation rejects invalid distances and toll amounts", () => {
-  const validRoute = {
-    fromLocationId,
-    toLocationId,
-    distanceKm: 1,
-    tollAmount: 0,
-  };
-
+test("route creation validates endpoints, limits, precision, and unknown fields", () => {
+  assert.equal(createRouteSchema.safeParse(validRoute).success, true);
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, toLocationId: fromLocationId })
+      .success,
+    false,
+  );
   assert.equal(
     createRouteSchema.safeParse({ ...validRoute, distanceKm: 0 }).success,
     false,
@@ -59,7 +69,91 @@ test("route creation rejects invalid distances and toll amounts", () => {
     false,
   );
   assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, distanceKm: "148.5" }).success,
+    true,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, distanceKm: 148.75 }).success,
+    true,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, distanceKm: 10.001 }).success,
+    false,
+  );
+  assert.equal(
     createRouteSchema.safeParse({ ...validRoute, tollAmount: -1 }).success,
+    false,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, tollAmount: "0.2" }).success,
+    true,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, tollAmount: 0.29 }).success,
+    true,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, tollAmount: 80.123 }).success,
+    false,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, unexpected: true }).success,
+    false,
+  );
+});
+
+test("route creation preserves numeric coercion and rejects non-finite values", () => {
+  const result = createRouteSchema.safeParse({
+    ...validRoute,
+    distanceKm: "12.34",
+    tollAmount: "99.99",
+  });
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.distanceKm, 12.34);
+    assert.equal(result.data.tollAmount, 99.99);
+  }
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, distanceKm: Number.NaN })
+      .success,
+    false,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, tollAmount: Infinity }).success,
+    false,
+  );
+});
+
+test("route updates accept partial values and reject empty or unknown input", () => {
+  assert.deepEqual(updateRouteSchema.parse({ distanceKm: "12.34" }), {
+    distanceKm: 12.34,
+  });
+  assert.equal(updateRouteSchema.safeParse({}).success, false);
+  assert.equal(
+    updateRouteSchema.safeParse({ tollAmount: 30, unexpected: true }).success,
+    false,
+  );
+  assert.equal(
+    updateRouteSchema.safeParse({ tollAmount: 10.001 }).success,
+    false,
+  );
+});
+
+test("route parameters and status input are strict", () => {
+  assert.deepEqual(routeParamsSchema.parse({ routeId: fromLocationId }), {
+    routeId: fromLocationId,
+  });
+  assert.equal(routeParamsSchema.safeParse({ routeId: "invalid" }).success, false);
+  assert.deepEqual(updateRouteStatusSchema.parse({ isActive: true }), {
+    isActive: true,
+  });
+  assert.equal(
+    updateRouteStatusSchema.safeParse({ isActive: "true" }).success,
+    false,
+  );
+  assert.equal(
+    updateRouteStatusSchema.safeParse({ isActive: true, unexpected: true })
+      .success,
     false,
   );
 });
