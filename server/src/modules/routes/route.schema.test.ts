@@ -11,15 +11,16 @@ test("quote query accepts valid UUIDs", () => {
     true,
   );
   assert.equal(
-    quoteQuerySchema.safeParse({ fromLocationId: "invalid", toLocationId }).success,
+    quoteQuerySchema.safeParse({ fromLocationId: "invalid", toLocationId })
+      .success,
     false,
   );
 });
 
-test("route creation accepts numeric strings and permits matching endpoints", () => {
+test("route creation accepts numeric strings and rejects matching endpoints", () => {
   const result = createRouteSchema.safeParse({
     fromLocationId,
-    toLocationId: fromLocationId,
+    toLocationId,
     distanceKm: "148.5",
     tollAmount: "280.25",
   });
@@ -28,16 +29,37 @@ test("route creation accepts numeric strings and permits matching endpoints", ()
   if (!result.success) return;
   assert.equal(result.data.distanceKm, 148.5);
   assert.equal(result.data.tollAmount, 280.25);
+  assert.equal(
+    createRouteSchema.safeParse({
+      ...result.data,
+      toLocationId: fromLocationId,
+    }).success,
+    false,
+  );
 });
 
 test("route creation rejects invalid distances and toll amounts", () => {
-  const validRoute = { fromLocationId, toLocationId, distanceKm: 1, tollAmount: 0 };
+  const validRoute = {
+    fromLocationId,
+    toLocationId,
+    distanceKm: 1,
+    tollAmount: 0,
+  };
 
-  assert.equal(createRouteSchema.safeParse({ ...validRoute, distanceKm: 0 }).success, false);
-  assert.equal(createRouteSchema.safeParse({ ...validRoute, distanceKm: -1 }).success, false);
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, distanceKm: 0 }).success,
+    false,
+  );
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, distanceKm: -1 }).success,
+    false,
+  );
   assert.equal(
     createRouteSchema.safeParse({ ...validRoute, distanceKm: 100_000 }).success,
     false,
   );
-  assert.equal(createRouteSchema.safeParse({ ...validRoute, tollAmount: -1 }).success, false);
+  assert.equal(
+    createRouteSchema.safeParse({ ...validRoute, tollAmount: -1 }).success,
+    false,
+  );
 });

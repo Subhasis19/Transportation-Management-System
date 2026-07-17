@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { AdminBookings } from "@/features/admin/admin-bookings";
 import { AdminLocations } from "@/features/admin/admin-locations";
+import { AdminRoutes } from "@/features/admin/admin-routes";
 import { currency } from "@/lib/formatters";
 import type { ApiRequest } from "@/lib/api-client";
 import type { Dashboard, Report } from "@/types/domain";
@@ -20,7 +27,9 @@ export function AdminWorkspace({
   report,
   refresh,
 }: AdminWorkspaceProps) {
-  const [view, setView] = useState<"overview" | "locations">("overview");
+  const [view, setView] = useState<"overview" | "locations" | "routes">(
+    "overview",
+  );
   const statusMap = new Map(
     dashboard?.vehicles.map(({ status, _count }) => [status, _count]),
   );
@@ -28,18 +37,40 @@ export function AdminWorkspace({
     return (
       <div className="space-y-4">
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setView("overview")}>Overview</Button>
+          <Button variant="outline" onClick={() => setView("overview")}>
+            Overview
+          </Button>
           <Button>Locations</Button>
         </div>
         <AdminLocations request={request} report={report} />
       </div>
     );
   }
+  if (view === "routes")
+    return (
+      <div className="space-y-4">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setView("overview")}>
+            Overview
+          </Button>
+          <Button variant="outline" onClick={() => setView("locations")}>
+            Locations
+          </Button>
+          <Button>Routes</Button>
+        </div>
+        <AdminRoutes request={request} report={report} />
+      </div>
+    );
   return (
     <div className="space-y-7">
       <div className="flex gap-2">
         <Button>Overview</Button>
-        <Button variant="outline" onClick={() => setView("locations")}>Locations</Button>
+        <Button variant="outline" onClick={() => setView("locations")}>
+          Locations
+        </Button>
+        <Button variant="outline" onClick={() => setView("routes")}>
+          Routes
+        </Button>
       </div>
       <section>
         <p className="font-heading text-xs font-semibold tracking-[0.2em] text-indigo-600">
