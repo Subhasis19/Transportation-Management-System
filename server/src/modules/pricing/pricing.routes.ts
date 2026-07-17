@@ -6,10 +6,9 @@ import { listRateCards, updateRateCardHandler } from "./pricing.controller";
 
 export const adminPricingRouter = Router();
 
-adminPricingRouter.get("/", authenticate, allow(Role.ADMIN), asyncHandler(listRateCards));
+adminPricingRouter.use(authenticate, allow(Role.ADMIN));
+adminPricingRouter.get("/", asyncHandler(listRateCards));
 adminPricingRouter.patch(
     "/:vehicleType",
-    authenticate,
-    allow(Role.ADMIN),
     asyncHandler(updateRateCardHandler),
 );

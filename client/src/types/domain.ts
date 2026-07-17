@@ -56,6 +56,22 @@ export type AdminRouteListResponse = {
   total: number;
 };
 
+export type VehicleType =
+  | "MINI_TRUCK"
+  | "LIGHT_TRUCK"
+  | "MEDIUM_TRUCK"
+  | "HEAVY_TRUCK";
+
+export type AdminRateCard = {
+  id: string;
+  vehicleType: VehicleType;
+  baseFare: number;
+  perKmRate: number;
+  gstPercent: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Quote = {
   route: { distanceKm: number; tollAmount: number };
   options: Array<{
