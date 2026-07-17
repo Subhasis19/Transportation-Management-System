@@ -36,6 +36,7 @@ const blank = (): Form => ({
 const errorText = (error: unknown) =>
   error instanceof Error ? error.message : "Unable to complete route action";
 const validNumber = (value: string, minimum: number, maximum: number) => {
+  if (value.trim() === "") return false;
   const number = Number(value);
   return (
     Number.isFinite(number) &&
@@ -54,11 +55,15 @@ export function AdminRoutes({ request, report }: Props) {
   const [locations, setLocations] = useState<AdminLocation[]>([]);
   const [routeError, setRouteError] = useState<string | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [locationLoading, setLocationLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Form | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<AdminRoute | null>(null);
+  const [statusActionError, setStatusActionError] = useState<string | null>(
+    null,
+  );
   const mounted = useRef(true);
   const routeId = useRef(0);
   const locationId = useRef(0);
@@ -130,6 +135,8 @@ export function AdminRoutes({ request, report }: Props) {
     locationController.current?.abort();
     locationController.current = controller;
     const id = ++locationId.current;
+    setLocationLoading(true);
+    setLocationError(null);
     void request<AdminLocationListResponse>("/admin/locations?status=active", {
       signal: controller.signal,
     })
@@ -151,6 +158,11 @@ export function AdminRoutes({ request, report }: Props) {
         ) {
           setLocationError(errorText(error));
         }
+      })
+      .finally(() => {
+        if (mounted.current && id === locationId.current) {
+          setLocationLoading(false);
+        }
       });
     return () => {
       controller.abort();
@@ -165,7 +177,9 @@ export function AdminRoutes({ request, report }: Props) {
       ]
     : locations;
   const openForm = (route: AdminRoute | null) => {
+    if (saving) return;
     setConfirming(null);
+    setStatusActionError(null);
     setForm(
       route
         ? {
@@ -180,7 +194,7 @@ export function AdminRoutes({ request, report }: Props) {
     setFormError(null);
   };
   const save = async () => {
-    if (!form || saving || locationError) return;
+    if (!form || saving || locationError || locationLoading) return;
     if (
       !form.fromLocationId ||
       !form.toLocationId ||
@@ -218,6 +232,7 @@ export function AdminRoutes({ request, report }: Props) {
   };
   const changeStatus = async () => {
     if (!confirming || saving) return;
+    setStatusActionError(null);
     setSaving(true);
     try {
       await request<AdminRoute>(`/admin/routes/${confirming.id}/status`, {
@@ -227,9 +242,10 @@ export function AdminRoutes({ request, report }: Props) {
       if (!mounted.current) return;
       report(`Route ${confirming.isActive ? "deactivated" : "activated"}`);
       setConfirming(null);
+      setStatusActionError(null);
       await refresh();
     } catch (error) {
-      if (mounted.current) setRouteError(errorText(error));
+      if (mounted.current) setStatusActionError(errorText(error));
     } finally {
       if (mounted.current) setSaving(false);
     }
@@ -244,7 +260,12 @@ export function AdminRoutes({ request, report }: Props) {
           <h1 className="mt-2 text-3xl font-bold">Route Master</h1>
         </div>
         <Button
-          disabled={locations.length < 2 || !!locationError}
+          disabled={
+            locationLoading ||
+            locations.length < 2 ||
+            !!locationError ||
+            saving
+          }
           onClick={() => openForm(null)}
         >
           Add route
@@ -255,29 +276,40 @@ export function AdminRoutes({ request, report }: Props) {
           Unable to load active locations: {locationError}
         </p>
       )}
-      {locations.length < 2 && !locationError && (
+      {locationLoading && (
+        <p aria-live="polite" className="text-sm text-slate-500">
+          Loading active locations…
+        </p>
+      )}
+      {locations.length < 2 && !locationLoading && !locationError && (
         <p className="text-sm text-amber-700">
           At least two active locations are required to create a route.
         </p>
       )}
       <Card>
         <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row">
-          <input
-            className="h-9 flex-1 rounded border px-3"
-            aria-label="Search routes"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search origin or destination"
-          />
-          <select
-            className="h-9 rounded border px-3"
-            value={status}
-            onChange={(event) => setStatus(event.target.value as Status)}
-          >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <label className="grid flex-1 gap-1 text-sm">
+            Search routes
+            <input
+              className="h-9 rounded border px-3"
+              aria-label="Search routes"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search origin or destination"
+            />
+          </label>
+          <label className="grid gap-1 text-sm">
+            Status
+            <select
+              className="h-9 rounded border px-3"
+              value={status}
+              onChange={(event) => setStatus(event.target.value as Status)}
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </label>
           <Button
             variant="outline"
             onClick={() => {
@@ -295,62 +327,85 @@ export function AdminRoutes({ request, report }: Props) {
             <CardTitle>{form.route ? "Edit route" : "Add route"}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">
-            <select
-              aria-label="Origin"
-              value={form.fromLocationId}
-              onChange={(event) =>
-                setForm({ ...form, fromLocationId: event.target.value })
-              }
-            >
-              <option value="">Origin</option>
-              {options.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.cityName}
-                  {!location.isActive ? " (Inactive)" : ""}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Destination"
-              value={form.toLocationId}
-              onChange={(event) =>
-                setForm({ ...form, toLocationId: event.target.value })
-              }
-            >
-              <option value="">Destination</option>
-              {options.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.cityName}
-                  {!location.isActive ? " (Inactive)" : ""}
-                </option>
-              ))}
-            </select>
-            <input
-              aria-label="Distance in kilometres"
-              type="number"
-              step="0.01"
-              placeholder="Distance in kilometres"
-              value={form.distanceKm}
-              onChange={(event) =>
-                setForm({ ...form, distanceKm: event.target.value })
-              }
-            />
-            <input
-              aria-label="Toll amount"
-              type="number"
-              step="0.01"
-              placeholder="Toll amount"
-              value={form.tollAmount}
-              onChange={(event) =>
-                setForm({ ...form, tollAmount: event.target.value })
-              }
-            />
-            {formError && <p className="text-red-600">{formError}</p>}
+            <label className="grid gap-1 text-sm">
+              Origin
+              <select
+                aria-describedby={formError ? "route-form-error" : undefined}
+                value={form.fromLocationId}
+                onChange={(event) =>
+                  setForm({ ...form, fromLocationId: event.target.value })
+                }
+              >
+                <option value="">Origin</option>
+                {options.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.cityName}
+                    {!location.isActive ? " (Inactive)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              Destination
+              <select
+                aria-describedby={formError ? "route-form-error" : undefined}
+                value={form.toLocationId}
+                onChange={(event) =>
+                  setForm({ ...form, toLocationId: event.target.value })
+                }
+              >
+                <option value="">Destination</option>
+                {options.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.cityName}
+                    {!location.isActive ? " (Inactive)" : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm">
+              Distance in kilometres
+              <input
+                aria-describedby={formError ? "route-form-error" : undefined}
+                type="number"
+                step="0.01"
+                placeholder="Distance in kilometres"
+                value={form.distanceKm}
+                onChange={(event) =>
+                  setForm({ ...form, distanceKm: event.target.value })
+                }
+              />
+            </label>
+            <label className="grid gap-1 text-sm">
+              Toll amount
+              <input
+                aria-describedby={formError ? "route-form-error" : undefined}
+                type="number"
+                step="0.01"
+                placeholder="Toll amount"
+                value={form.tollAmount}
+                onChange={(event) =>
+                  setForm({ ...form, tollAmount: event.target.value })
+                }
+              />
+            </label>
+            {formError && (
+              <p id="route-form-error" aria-live="polite" className="text-red-600">
+                {formError}
+              </p>
+            )}
             <div>
-              <Button disabled={saving || !!locationError} onClick={save}>
+              <Button
+                disabled={saving || locationLoading || !!locationError}
+                onClick={save}
+              >
                 {saving ? "Saving…" : "Save route"}
               </Button>
-              <Button variant="outline" onClick={() => setForm(null)}>
+              <Button
+                variant="outline"
+                disabled={saving}
+                onClick={() => setForm(null)}
+              >
                 Cancel
               </Button>
             </div>
@@ -372,6 +427,11 @@ export function AdminRoutes({ request, report }: Props) {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {statusActionError && (
+              <p aria-live="polite" className="mb-3 text-red-600">
+                {statusActionError}
+              </p>
+            )}
             <Button disabled={saving} onClick={changeStatus}>
               {saving
                 ? "Updating…"
@@ -379,7 +439,14 @@ export function AdminRoutes({ request, report }: Props) {
                   ? "Deactivate route"
                   : "Activate route"}
             </Button>
-            <Button variant="outline" onClick={() => setConfirming(null)}>
+            <Button
+              variant="outline"
+              disabled={saving}
+              onClick={() => {
+                setConfirming(null);
+                setStatusActionError(null);
+              }}
+            >
               Cancel
             </Button>
           </CardContent>
@@ -438,6 +505,7 @@ export function AdminRoutes({ request, report }: Props) {
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={saving}
                           onClick={() => openForm(route)}
                         >
                           Edit
@@ -445,8 +513,11 @@ export function AdminRoutes({ request, report }: Props) {
                         <Button
                           size="sm"
                           variant="outline"
+                          disabled={saving}
                           onClick={() => {
+                            if (saving) return;
                             setForm(null);
+                            setStatusActionError(null);
                             setConfirming(route);
                           }}
                         >

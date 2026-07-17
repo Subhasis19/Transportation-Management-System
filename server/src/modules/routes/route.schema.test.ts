@@ -49,12 +49,12 @@ test("admin route query applies defaults, trimming, and status filters", () => {
   );
 });
 
-test("route creation validates endpoints, limits, precision, and unknown fields", () => {
+test("route creation validates limits, precision, and unknown fields", () => {
   assert.equal(createRouteSchema.safeParse(validRoute).success, true);
   assert.equal(
     createRouteSchema.safeParse({ ...validRoute, toLocationId: fromLocationId })
       .success,
-    false,
+    true,
   );
   assert.equal(
     createRouteSchema.safeParse({ ...validRoute, distanceKm: 0 }).success,
@@ -124,6 +124,29 @@ test("route creation preserves numeric coercion and rejects non-finite values", 
   );
 });
 
+test("route numeric inputs reject blanks and booleans while preserving zero toll", () => {
+  for (const input of [
+    { distanceKm: "" },
+    { tollAmount: "" },
+    { tollAmount: "   " },
+    { distanceKm: false },
+    { tollAmount: false },
+  ]) {
+    assert.equal(createRouteSchema.safeParse({ ...validRoute, ...input }).success, false);
+  }
+
+  const result = createRouteSchema.safeParse({
+    ...validRoute,
+    distanceKm: "12.50",
+    tollAmount: "0",
+  });
+  assert.equal(result.success, true);
+  if (result.success) {
+    assert.equal(result.data.distanceKm, 12.5);
+    assert.equal(result.data.tollAmount, 0);
+  }
+});
+
 test("route updates accept partial values and reject empty or unknown input", () => {
   assert.deepEqual(updateRouteSchema.parse({ distanceKm: "12.34" }), {
     distanceKm: 12.34,
@@ -137,6 +160,11 @@ test("route updates accept partial values and reject empty or unknown input", ()
     updateRouteSchema.safeParse({ tollAmount: 10.001 }).success,
     false,
   );
+  assert.equal(updateRouteSchema.safeParse({ distanceKm: "" }).success, false);
+  assert.equal(updateRouteSchema.safeParse({ tollAmount: false }).success, false);
+  assert.deepEqual(updateRouteSchema.parse({ tollAmount: "0" }), {
+    tollAmount: 0,
+  });
 });
 
 test("route parameters and status input are strict", () => {

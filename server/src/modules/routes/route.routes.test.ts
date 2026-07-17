@@ -38,6 +38,28 @@ test("admin route endpoints reject malformed bearer tokens", async () => {
   );
 });
 
+test("equal route endpoints return the service validation error before Prisma", async () => {
+  const token = signAccessToken({
+    id,
+    role: Role.ADMIN,
+    email: "admin@example.com",
+  });
+  const response = await request(app)
+    .post("/admin/routes")
+    .set("Authorization", `Bearer ${token}`)
+    .send({
+      fromLocationId: id,
+      toLocationId: id,
+      distanceKm: 12.5,
+      tollAmount: 0,
+    });
+
+  assert.equal(response.status, 400);
+  assert.deepEqual(response.body, {
+    message: "Origin and destination must differ",
+  });
+});
+
 for (const role of [Role.CUSTOMER, Role.DRIVER]) {
   test(`${role} cannot access admin routes`, async () => {
     const token = signAccessToken({

@@ -1,6 +1,37 @@
 import { z } from "zod";
-import { moneySchema, uuidSchema } from "../../common/schemas/common.schema";
+import { uuidSchema } from "../../common/schemas/common.schema";
 import { hasAtMostTwoDecimalPlaces } from "./route.rules";
+
+const normalizeRouteNumericValue = (value: unknown) => {
+  if (
+    typeof value === "boolean" ||
+    (typeof value === "string" && value.trim() === "")
+  ) {
+    return Number.NaN;
+  }
+
+  return value;
+};
+
+const routeDistanceSchema = z.preprocess(
+  normalizeRouteNumericValue,
+  z.coerce
+    .number()
+    .finite()
+    .positive()
+    .max(99_999)
+    .refine(hasAtMostTwoDecimalPlaces),
+);
+
+const routeTollSchema = z.preprocess(
+  normalizeRouteNumericValue,
+  z.coerce
+    .number()
+    .finite()
+    .min(0)
+    .max(99_999_999)
+    .refine(hasAtMostTwoDecimalPlaces),
+);
 
 export const quoteQuerySchema = z.object({
   fromLocationId: uuidSchema,
@@ -11,18 +42,10 @@ export const createRouteSchema = z
   .object({
     fromLocationId: uuidSchema,
     toLocationId: uuidSchema,
-    distanceKm: z.coerce
-      .number()
-      .finite()
-      .positive()
-      .max(99_999)
-      .refine(hasAtMostTwoDecimalPlaces),
-    tollAmount: moneySchema.refine(hasAtMostTwoDecimalPlaces),
+    distanceKm: routeDistanceSchema,
+    tollAmount: routeTollSchema,
   })
-  .strict()
-  .refine((value) => value.fromLocationId !== value.toLocationId, {
-    message: "Origin and destination must differ",
-  });
+  .strict();
 
 export const adminRouteQuerySchema = z.object({
     search: z.string().trim().max(100).default(""),
@@ -32,14 +55,8 @@ export const updateRouteSchema = z
   .object({
     fromLocationId: uuidSchema.optional(),
     toLocationId: uuidSchema.optional(),
-    distanceKm: z.coerce
-      .number()
-      .finite()
-      .positive()
-      .max(99_999)
-      .refine(hasAtMostTwoDecimalPlaces)
-      .optional(),
-    tollAmount: moneySchema.refine(hasAtMostTwoDecimalPlaces).optional(),
+    distanceKm: routeDistanceSchema.optional(),
+    tollAmount: routeTollSchema.optional(),
   })
   .strict()
   .refine((value) => Object.keys(value).length > 0);

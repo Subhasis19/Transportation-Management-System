@@ -120,6 +120,10 @@ export async function getAdminRoutes(query: AdminRouteQuery) {
 }
 
 export async function createRoute(input: CreateRouteInput) {
+    if (input.fromLocationId === input.toLocationId) {
+        throw new AppError(400, "Origin and destination must differ");
+    }
+
     try {
         return await prisma.$transaction(async (tx) => {
             await validateLocations(tx, input.fromLocationId, input.toLocationId);
