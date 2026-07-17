@@ -18,6 +18,7 @@ import {
 import { adminVehicleRouter } from "./modules/vehicles/vehicle.routes";
 import { adminPricingRouter } from "./modules/pricing/pricing.routes";
 import { adminDriverRouter } from "./modules/drivers/driver.routes";
+import { adminUserRouter } from "./modules/users/user.routes";
 import { adminDashboardRouter } from "./modules/dashboard/dashboard.routes";
 import {
   bookingRouter,
@@ -49,6 +50,7 @@ app.use("/admin/routes", adminRouteRouter);
 app.use("/admin/vehicles", adminVehicleRouter);
 app.use("/admin/rate-cards", adminPricingRouter);
 app.use("/admin/drivers", adminDriverRouter);
+app.use("/admin/users", adminUserRouter);
 app.use("/admin/dashboard", adminDashboardRouter);
 app.use("/bookings", bookingRouter);
 app.use("/admin/bookings", adminBookingRouter);

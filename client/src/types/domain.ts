@@ -191,6 +191,53 @@ export type CreateDriverResponse = {
   temporaryPassword: string;
 };
 
+export type UserActivityStatus = "RECENT" | "STALE" | "NEVER";
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: Role;
+  isActive: boolean;
+  activityStatus: UserActivityStatus;
+  lastLoginAt: string | null;
+  customerBookingCount: number;
+  driverAssignmentCount: number;
+  isCurrentUser: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminUserListResponse = {
+  items: AdminUser[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export type AdminUserRecentBooking = {
+  id: string;
+  relationship: "CUSTOMER" | "DRIVER";
+  status: BookingStatus;
+  estimatedFare: number;
+  pickupAt: string;
+  createdAt: string;
+  vehicle: {
+    id: string;
+    regNumber: string;
+  };
+  fromLocation: Location;
+  toLocation: Location;
+};
+
+export type AdminUserDetail = AdminUser & {
+  licenseNumber: string | null;
+  licenseExpiry: string | null;
+  totalRelevantBookings: number;
+  recentBookings: AdminUserRecentBooking[];
+};
+
 export type Dashboard = {
   vehicles: Array<{ status: VehicleStatus; _count: number }>;
   revenueThisMonth: number;

@@ -13,6 +13,7 @@ import { AdminPricing } from "@/features/admin/admin-pricing";
 import { AdminRoutes } from "@/features/admin/admin-routes";
 import { AdminVehicles } from "@/features/admin/admin-vehicles";
 import { AdminDrivers } from "@/features/admin/admin-drivers";
+import { AdminUsers } from "@/features/admin/admin-users";
 import { currency } from "@/lib/formatters";
 import type { ApiRequest } from "@/lib/api-client";
 import type { Dashboard, Report } from "@/types/domain";
@@ -31,7 +32,7 @@ export function AdminWorkspace({
   refresh,
 }: AdminWorkspaceProps) {
   const [view, setView] = useState<
-    "overview" | "locations" | "routes" | "pricing" | "vehicles" | "drivers"
+    "overview" | "locations" | "routes" | "pricing" | "vehicles" | "drivers" | "users"
   >("overview");
   const statusMap = new Map(
     dashboard?.vehicles.map(({ status, _count }) => [status, _count]),
@@ -45,6 +46,7 @@ export function AdminWorkspace({
         ["pricing", "Pricing"],
         ["vehicles", "Vehicles"],
         ["drivers", "Drivers"],
+        ["users", "Users"],
       ] as const).map(([target, label]) => (
         <Button
           key={target}
@@ -93,6 +95,14 @@ export function AdminWorkspace({
       <div className="space-y-4">
         {navigation}
         <AdminDrivers request={request} report={report} />
+      </div>
+    );
+  }
+  if (view === "users") {
+    return (
+      <div className="space-y-4">
+        {navigation}
+        <AdminUsers request={request} report={report} />
       </div>
     );
   }
