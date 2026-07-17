@@ -32,50 +32,55 @@ enum BookingStatus {
 }
 
 model User {
-  id String @id @default(uuid())
-  name String @db.VarChar(100)
-  email String @unique @db.VarChar(150)
-  phone String @unique @db.VarChar(15)
-  passwordHash String @map("password_hash") @db.VarChar(255)
-  role Role
-  licenseNumber String? @map("license_number") @db.VarChar(50)
-  licenseExpiry DateTime? @map("license_expiry") @db.Date
-  isActive Boolean @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  bookingsAsCustomer Booking[] @relation("CustomerBookings")
-  bookingsAsDriver Booking[] @relation("DriverBookings")
-  refreshTokens RefreshToken[]
+  id                 String         @id @default(uuid())
+  name               String         @db.VarChar(100)
+  email              String         @unique @db.VarChar(150)
+  phone              String         @unique @db.VarChar(15)
+  passwordHash       String         @map("password_hash") @db.VarChar(255)
+  role               Role
+  licenseNumber      String?        @map("license_number") @db.VarChar(50)
+  licenseExpiry      DateTime?      @map("license_expiry") @db.Date
+  isActive           Boolean        @default(true) @map("is_active")
+  lastLoginAt        DateTime?      @map("last_login_at")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  updatedAt          DateTime       @updatedAt @map("updated_at")
+  bookingsAsCustomer Booking[]      @relation("CustomerBookings")
+  bookingsAsDriver   Booking[]      @relation("DriverBookings")
+  refreshTokens      RefreshToken[]
+
   @@index([role])
   @@index([licenseExpiry])
+  @@index([lastLoginAt])
   @@map("users")
 }
 
 model RefreshToken {
-  id String @id @default(uuid())
-  tokenHash String @unique @map("token_hash") @db.VarChar(255)
+  id        String   @id @default(uuid())
+  tokenHash String   @unique @map("token_hash") @db.VarChar(255)
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
-  userId String @map("user_id")
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
   @@map("refresh_tokens")
 }
 
 model Vehicle {
-  id String @id @default(uuid())
-  regNumber String @unique @map("reg_number") @db.VarChar(20)
-  vehicleType String @map("vehicle_type") @db.VarChar(50)
-  capacityKg Decimal @map("capacity_kg") @db.Decimal(10, 2)
-  status VehicleStatus @default(AVAILABLE)
-  rcNumber String @map("rc_number") @db.VarChar(50)
-  rcExpiry DateTime @map("rc_expiry") @db.Date
-  permitNumber String @map("permit_number") @db.VarChar(50)
-  permitExpiry DateTime @map("permit_expiry") @db.Date
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  bookings Booking[]
-  rateCard Pricing @relation(fields: [vehicleType], references: [vehicleType])
+  id           String        @id @default(uuid())
+  regNumber    String        @unique @map("reg_number") @db.VarChar(20)
+  vehicleType  String        @map("vehicle_type") @db.VarChar(50)
+  capacityKg   Decimal       @map("capacity_kg") @db.Decimal(10, 2)
+  status       VehicleStatus @default(AVAILABLE)
+  rcNumber     String        @map("rc_number") @db.VarChar(50)
+  rcExpiry     DateTime      @map("rc_expiry") @db.Date
+  permitNumber String        @map("permit_number") @db.VarChar(50)
+  permitExpiry DateTime      @map("permit_expiry") @db.Date
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  bookings     Booking[]
+  rateCard     Pricing       @relation(fields: [vehicleType], references: [vehicleType])
+
   @@index([status])
   @@index([rcExpiry])
   @@index([permitExpiry])
@@ -83,76 +88,90 @@ model Vehicle {
 }
 
 model Location {
-  id String @id @default(uuid())
-  cityName String @unique @map("city_name") @db.VarChar(100)
-  routesFrom Route[] @relation("RouteFrom")
-  routesTo Route[] @relation("RouteTo")
+  id           String    @id @default(uuid())
+  cityName     String    @unique @map("city_name") @db.VarChar(100)
+  isActive     Boolean   @default(true) @map("is_active")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at")
+  routesFrom   Route[]   @relation("RouteFrom")
+  routesTo     Route[]   @relation("RouteTo")
   bookingsFrom Booking[] @relation("BookingFrom")
-  bookingsTo Booking[] @relation("BookingTo")
+  bookingsTo   Booking[] @relation("BookingTo")
+
+  @@index([isActive])
   @@map("locations")
 }
 
 model Route {
-  id String @id @default(uuid())
-  fromLocationId String @map("from_location_id")
-  toLocationId String @map("to_location_id")
-  distanceKm Decimal @map("distance_km") @db.Decimal(8, 2)
-  tollAmount Decimal @default(0) @map("toll_amount") @db.Decimal(10, 2)
-  fromLocation Location @relation("RouteFrom", fields: [fromLocationId], references: [id])
-  toLocation Location @relation("RouteTo", fields: [toLocationId], references: [id])
+  id             String   @id @default(uuid())
+  fromLocationId String   @map("from_location_id")
+  toLocationId   String   @map("to_location_id")
+  distanceKm     Decimal  @map("distance_km") @db.Decimal(8, 2)
+  tollAmount     Decimal  @default(0) @map("toll_amount") @db.Decimal(10, 2)
+  isActive       Boolean  @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at")
+  fromLocation   Location @relation("RouteFrom", fields: [fromLocationId], references: [id])
+  toLocation     Location @relation("RouteTo", fields: [toLocationId], references: [id])
+
   @@unique([fromLocationId, toLocationId])
+  @@index([isActive])
   @@map("routes")
 }
 
 model Pricing {
-  id String @id @default(uuid())
-  vehicleType String @unique @map("vehicle_type") @db.VarChar(50)
-  baseFare Decimal @map("base_fare") @db.Decimal(10, 2)
-  perKmRate Decimal @map("per_km_rate") @db.Decimal(10, 2)
-  gstPercent Decimal @default(18) @map("gst_percent") @db.Decimal(5, 2)
-  vehicles Vehicle[]
+  id          String    @id @default(uuid())
+  vehicleType String    @unique @map("vehicle_type") @db.VarChar(50)
+  baseFare    Decimal   @map("base_fare") @db.Decimal(10, 2)
+  perKmRate   Decimal   @map("per_km_rate") @db.Decimal(10, 2)
+  gstPercent  Decimal   @default(18) @map("gst_percent") @db.Decimal(5, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at")
+  vehicles    Vehicle[]
+
   @@map("pricing")
 }
 
 model Booking {
-  id String @id @default(uuid())
-  customerId String @map("customer_id")
-  vehicleId String @map("vehicle_id")
-  driverId String? @map("driver_id")
-  fromLocationId String @map("from_location_id")
-  toLocationId String @map("to_location_id")
-  pickupAt DateTime @map("pickup_at")
-  viaRoute String? @map("via_route") @db.VarChar(255)
-  consignorName String @map("consignor_name") @db.VarChar(150)
-  consigneeName String @map("consignee_name") @db.VarChar(150)
-  materialDescription String @map("material_description") @db.VarChar(255)
-  weightKg Decimal @map("weight_kg") @db.Decimal(10, 2)
-  declaredValue Decimal @map("declared_value") @db.Decimal(12, 2)
-  distanceKm Decimal @map("distance_km") @db.Decimal(8, 2)
-  baseFare Decimal @map("base_fare") @db.Decimal(10, 2)
-  distanceCharge Decimal @map("distance_charge") @db.Decimal(10, 2)
-  tollAmount Decimal @map("toll_amount") @db.Decimal(10, 2)
-  gstPercent Decimal @map("gst_percent") @db.Decimal(5, 2)
-  gstAmount Decimal @map("gst_amount") @db.Decimal(10, 2)
-  estimatedFare Decimal @map("estimated_fare") @db.Decimal(12, 2)
-  status BookingStatus @default(PENDING)
-  cancellationReason String? @map("cancellation_reason") @db.Text
-  cancelledAt DateTime? @map("cancelled_at")
-  lrNumber String? @unique @map("lr_number") @db.VarChar(30)
-  lrPdfUrl String? @map("lr_pdf_url") @db.VarChar(500)
-  lrGeneratedAt DateTime? @map("lr_generated_at")
-  deliveryTime DateTime? @map("delivery_time")
-  deliveryNotes String? @map("delivery_notes") @db.Text
-  invoiceNumber String? @unique @map("invoice_number") @db.VarChar(30)
-  invoicePdfUrl String? @map("invoice_pdf_url") @db.VarChar(500)
-  invoiceGeneratedAt DateTime? @map("invoice_generated_at")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  customer User @relation("CustomerBookings", fields: [customerId], references: [id])
-  driver User? @relation("DriverBookings", fields: [driverId], references: [id])
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
-  fromLocation Location @relation("BookingFrom", fields: [fromLocationId], references: [id])
-  toLocation Location @relation("BookingTo", fields: [toLocationId], references: [id])
+  id                  String        @id @default(uuid())
+  customerId          String        @map("customer_id")
+  vehicleId           String        @map("vehicle_id")
+  driverId            String?       @map("driver_id")
+  fromLocationId      String        @map("from_location_id")
+  toLocationId        String        @map("to_location_id")
+  pickupAt            DateTime      @map("pickup_at")
+  viaRoute            String?       @map("via_route") @db.VarChar(255)
+  consignorName       String        @map("consignor_name") @db.VarChar(150)
+  consigneeName       String        @map("consignee_name") @db.VarChar(150)
+  materialDescription String        @map("material_description") @db.VarChar(255)
+  weightKg            Decimal       @map("weight_kg") @db.Decimal(10, 2)
+  declaredValue       Decimal       @map("declared_value") @db.Decimal(12, 2)
+  distanceKm          Decimal       @map("distance_km") @db.Decimal(8, 2)
+  baseFare            Decimal       @map("base_fare") @db.Decimal(10, 2)
+  distanceCharge      Decimal       @map("distance_charge") @db.Decimal(10, 2)
+  tollAmount          Decimal       @map("toll_amount") @db.Decimal(10, 2)
+  gstPercent          Decimal       @map("gst_percent") @db.Decimal(5, 2)
+  gstAmount           Decimal       @map("gst_amount") @db.Decimal(10, 2)
+  estimatedFare       Decimal       @map("estimated_fare") @db.Decimal(12, 2)
+  status              BookingStatus @default(PENDING)
+  cancellationReason  String?       @map("cancellation_reason") @db.Text
+  cancelledAt         DateTime?     @map("cancelled_at")
+  lrNumber            String?       @unique @map("lr_number") @db.VarChar(30)
+  lrPdfUrl            String?       @map("lr_pdf_url") @db.VarChar(500)
+  lrGeneratedAt       DateTime?     @map("lr_generated_at")
+  deliveryTime        DateTime?     @map("delivery_time")
+  deliveryNotes       String?       @map("delivery_notes") @db.Text
+  invoiceNumber       String?       @unique @map("invoice_number") @db.VarChar(30)
+  invoicePdfUrl       String?       @map("invoice_pdf_url") @db.VarChar(500)
+  invoiceGeneratedAt  DateTime?     @map("invoice_generated_at")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  updatedAt           DateTime      @updatedAt @map("updated_at")
+  customer            User          @relation("CustomerBookings", fields: [customerId], references: [id])
+  driver              User?         @relation("DriverBookings", fields: [driverId], references: [id])
+  vehicle             Vehicle       @relation(fields: [vehicleId], references: [id])
+  fromLocation        Location      @relation("BookingFrom", fields: [fromLocationId], references: [id])
+  toLocation          Location      @relation("BookingTo", fields: [toLocationId], references: [id])
+
   @@index([status])
   @@index([customerId])
   @@index([driverId])

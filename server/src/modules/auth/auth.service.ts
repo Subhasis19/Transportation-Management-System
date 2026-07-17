@@ -11,12 +11,14 @@ import type { LoginInput, RegisterInput, RefreshTokenInput } from "./auth.schema
 
 export async function registerUser(input: RegisterInput) {
     const { password, ...profile } = input;
+    const authenticatedAt = new Date();
     const user = await prisma.user.create({
         data: {
             ...profile,
             email: profile.email.toLowerCase(),
             passwordHash: await bcrypt.hash(password, 12),
             role: Role.CUSTOMER,
+            lastLoginAt: authenticatedAt,
         },
     });
 
@@ -42,14 +44,23 @@ export async function loginUser(input: LoginInput) {
         throw new AppError(401, "Invalid email or password");
     }
 
+    const authenticatedUser = await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLoginAt: new Date() },
+    });
+
     return {
-        user: { id: user.id, name: user.name, role: user.role },
+        user: {
+            id: authenticatedUser.id,
+            name: authenticatedUser.name,
+            role: authenticatedUser.role,
+        },
         accessToken: signAccessToken({
-            id: user.id,
-            role: user.role,
-            email: user.email,
+            id: authenticatedUser.id,
+            role: authenticatedUser.role,
+            email: authenticatedUser.email,
         }),
-        refreshToken: await issueRefreshToken(user.id),
+        refreshToken: await issueRefreshToken(authenticatedUser.id),
     };
 }
 
