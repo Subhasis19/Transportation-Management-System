@@ -140,11 +140,55 @@ export type Booking = {
   toLocation: Location;
 };
 
-export type Driver = {
+export type DriverLicenseStatus =
+  | "VALID"
+  | "EXPIRING"
+  | "EXPIRED"
+  | "MISSING";
+
+export type AdminDriverActiveAssignment = {
+  id: string;
+  status: "CONFIRMED" | "IN_TRANSIT";
+  vehicle: {
+    id: string;
+    regNumber: string;
+  };
+  fromLocation: Location;
+  toLocation: Location;
+};
+
+export type AdminDriver = {
   id: string;
   name: string;
+  email: string;
+  phone: string;
   licenseNumber: string | null;
   licenseExpiry: string | null;
+  licenseStatus: DriverLicenseStatus;
+  isActive: boolean;
+  activeAssignment: AdminDriverActiveAssignment | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminDriverListResponse = {
+  items: AdminDriver[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export type DriverOption = {
+  id: string;
+  name: string;
+  licenseNumber: string;
+  licenseExpiry: string;
+};
+
+export type CreateDriverResponse = {
+  driver: AdminDriver;
+  temporaryPassword: string;
 };
 
 export type Dashboard = {

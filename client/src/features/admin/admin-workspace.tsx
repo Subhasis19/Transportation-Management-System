@@ -12,6 +12,7 @@ import { AdminLocations } from "@/features/admin/admin-locations";
 import { AdminPricing } from "@/features/admin/admin-pricing";
 import { AdminRoutes } from "@/features/admin/admin-routes";
 import { AdminVehicles } from "@/features/admin/admin-vehicles";
+import { AdminDrivers } from "@/features/admin/admin-drivers";
 import { currency } from "@/lib/formatters";
 import type { ApiRequest } from "@/lib/api-client";
 import type { Dashboard, Report } from "@/types/domain";
@@ -30,113 +31,74 @@ export function AdminWorkspace({
   refresh,
 }: AdminWorkspaceProps) {
   const [view, setView] = useState<
-    "overview" | "locations" | "routes" | "pricing" | "vehicles"
+    "overview" | "locations" | "routes" | "pricing" | "vehicles" | "drivers"
   >("overview");
   const statusMap = new Map(
     dashboard?.vehicles.map(({ status, _count }) => [status, _count]),
   );
+  const navigation = (
+    <div className="flex flex-wrap gap-2">
+      {([
+        ["overview", "Overview"],
+        ["locations", "Locations"],
+        ["routes", "Routes"],
+        ["pricing", "Pricing"],
+        ["vehicles", "Vehicles"],
+        ["drivers", "Drivers"],
+      ] as const).map(([target, label]) => (
+        <Button
+          key={target}
+          variant={view === target ? "default" : "outline"}
+          onClick={() => setView(target)}
+        >
+          {label}
+        </Button>
+      ))}
+    </div>
+  );
   if (view === "locations") {
     return (
       <div className="space-y-4">
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setView("overview")}>
-            Overview
-          </Button>
-          <Button>Locations</Button>
-          <Button variant="outline" onClick={() => setView("routes")}>
-            Routes
-          </Button>
-          <Button variant="outline" onClick={() => setView("pricing")}>
-            Pricing
-          </Button>
-          <Button variant="outline" onClick={() => setView("vehicles")}>
-            Vehicles
-          </Button>
-        </div>
+        {navigation}
         <AdminLocations request={request} report={report} />
       </div>
     );
   }
-  if (view === "routes")
+  if (view === "routes") {
     return (
       <div className="space-y-4">
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setView("overview")}>
-            Overview
-          </Button>
-          <Button variant="outline" onClick={() => setView("locations")}>
-            Locations
-          </Button>
-          <Button>Routes</Button>
-          <Button variant="outline" onClick={() => setView("pricing")}>
-            Pricing
-          </Button>
-          <Button variant="outline" onClick={() => setView("vehicles")}>
-            Vehicles
-          </Button>
-        </div>
+        {navigation}
         <AdminRoutes request={request} report={report} />
       </div>
     );
-  if (view === "pricing")
+  }
+  if (view === "pricing") {
     return (
       <div className="space-y-4">
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setView("overview")}>
-            Overview
-          </Button>
-          <Button variant="outline" onClick={() => setView("locations")}>
-            Locations
-          </Button>
-          <Button variant="outline" onClick={() => setView("routes")}>
-            Routes
-          </Button>
-          <Button>Pricing</Button>
-          <Button variant="outline" onClick={() => setView("vehicles")}>
-            Vehicles
-          </Button>
-        </div>
+        {navigation}
         <AdminPricing request={request} report={report} />
       </div>
     );
-  if (view === "vehicles")
+  }
+  if (view === "vehicles") {
     return (
       <div className="space-y-4">
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setView("overview")}>
-            Overview
-          </Button>
-          <Button variant="outline" onClick={() => setView("locations")}>
-            Locations
-          </Button>
-          <Button variant="outline" onClick={() => setView("routes")}>
-            Routes
-          </Button>
-          <Button variant="outline" onClick={() => setView("pricing")}>
-            Pricing
-          </Button>
-          <Button>Vehicles</Button>
-        </div>
+        {navigation}
         <AdminVehicles request={request} report={report} />
       </div>
     );
+  }
+  if (view === "drivers") {
+    return (
+      <div className="space-y-4">
+        {navigation}
+        <AdminDrivers request={request} report={report} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-7">
-      <div className="flex gap-2">
-        <Button>Overview</Button>
-        <Button variant="outline" onClick={() => setView("locations")}>
-          Locations
-        </Button>
-        <Button variant="outline" onClick={() => setView("routes")}>
-          Routes
-        </Button>
-        <Button variant="outline" onClick={() => setView("pricing")}>
-          Pricing
-        </Button>
-        <Button variant="outline" onClick={() => setView("vehicles")}>
-          Vehicles
-        </Button>
-      </div>
+      {navigation}
       <section>
         <p className="font-heading text-xs font-semibold tracking-[0.2em] text-indigo-600">
           ADMIN CONTROL CENTRE
