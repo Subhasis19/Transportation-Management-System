@@ -9,12 +9,12 @@ export async function getQuote(input: QuoteQueryInput) {
         throw new AppError(400, "Origin and destination must differ");
     }
 
-    const route = await prisma.route.findUnique({
+    const route = await prisma.route.findFirst({
         where: {
-            fromLocationId_toLocationId: {
-                fromLocationId: input.fromLocationId,
-                toLocationId: input.toLocationId,
-            },
+            fromLocationId: input.fromLocationId,
+            toLocationId: input.toLocationId,
+            fromLocation: { isActive: true },
+            toLocation: { isActive: true },
         },
     });
 

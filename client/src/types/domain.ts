@@ -20,6 +20,19 @@ export type User = { id: string; name: string; role: Role };
 
 export type Location = { id: string; cityName: string };
 
+export type AdminLocation = {
+  id: string;
+  cityName: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AdminLocationListResponse = {
+  items: AdminLocation[];
+  total: number;
+};
+
 export type Quote = {
   route: { distanceKm: number; tollAmount: number };
   options: Array<{

@@ -9,12 +9,12 @@ import { isWeightWithinVehicleCapacity } from "./booking.rules";
 
 export async function createBooking(customerId: string, input: CreateBookingInput) {
     return prisma.$transaction(async (tx) => {
-        const route = await tx.route.findUnique({
+        const route = await tx.route.findFirst({
             where: {
-                fromLocationId_toLocationId: {
-                    fromLocationId: input.fromLocationId,
-                    toLocationId: input.toLocationId,
-                },
+                fromLocationId: input.fromLocationId,
+                toLocationId: input.toLocationId,
+                fromLocation: { isActive: true },
+                toLocation: { isActive: true },
             },
         });
 
