@@ -7,6 +7,7 @@ import {
   confirmationCompensation,
   invoiceCompensation,
   retryConfirmationTransaction,
+  retryLifecycleTransaction,
 } from "./booking-lifecycle.service";
 
 test("LR compensation clears confirmation-only fields", () => {
@@ -59,4 +60,25 @@ test("confirmation transaction conflict retry stops after three attempts", async
   );
 
   assert.equal(attempts, 3);
+});
+
+test("generic lifecycle conflict retry stops after three attempts", async () => {
+  let attempts = 0;
+  await assert.rejects(
+    retryLifecycleTransaction(async () => {
+      attempts += 1;
+      throw { code: "P2034" };
+    }),
+    (error: unknown) =>
+      error instanceof AppError &&
+      error.statusCode === 409 &&
+      error.message === "Booking lifecycle conflict; please try again",
+  );
+  assert.equal(attempts, 3);
+});
+
+test("compensation predicates cannot overwrite a cancelled booking", () => {
+  const predicate = confirmationCompensation("booking-123").where;
+  assert.equal(predicate.status, BookingStatus.CONFIRMED);
+  assert.equal(predicate.lrPdfUrl, null);
 });
