@@ -16,7 +16,7 @@ type Props = {
   request: ApiRequest;
   report: Report;
   refreshDashboard: () => Promise<void>;
-  onNavigate: (view: "users" | "drivers" | "vehicles" | "bookings") => void;
+  onNavigate: (view: "drivers" | "vehicles" | "bookings") => void;
 };
 export function AdminOverviewDashboard({
   dashboard,
@@ -113,25 +113,6 @@ export function AdminOverviewDashboard({
           </Card>
         ))}
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick navigation</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => onNavigate("users")}>
-            Manage users
-          </Button>
-          <Button variant="outline" onClick={() => onNavigate("drivers")}>
-            Manage drivers
-          </Button>
-          <Button variant="outline" onClick={() => onNavigate("vehicles")}>
-            Manage vehicles
-          </Button>
-          <Button variant="outline" onClick={() => onNavigate("bookings")}>
-            Open booking operations
-          </Button>
-        </CardContent>
-      </Card>
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
