@@ -50,6 +50,15 @@ export function BookingForm({
     },
   });
   const findQuote = async () => {
+    const locationsAreValid = await form.trigger([
+      "fromLocationId",
+      "toLocationId",
+    ]);
+    if (!locationsAreValid) {
+      setQuote(null);
+      return;
+    }
+
     try {
       const { fromLocationId, toLocationId } = form.getValues();
       setQuote(
@@ -97,11 +106,13 @@ export function BookingForm({
               label="From"
               {...form.register("fromLocationId")}
               locations={locations}
+              error={form.formState.errors.fromLocationId?.message}
             />
             <LocationSelect
               label="To"
               {...form.register("toLocationId")}
               locations={locations}
+              error={form.formState.errors.toLocationId?.message}
             />
           </div>
           <Button type="button" variant="secondary" onClick={findQuote}>
@@ -113,35 +124,49 @@ export function BookingForm({
                 <b>{quote.route.distanceKm} km</b> route · Toll{" "}
                 {currency(quote.route.tollAmount)}
               </div>
-              <div className="grid gap-3">
-                {quote.options.map((option) => (
-                  <label
-                    key={option.vehicle.id}
-                    className="flex cursor-pointer items-center justify-between rounded-lg border p-4 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50"
-                  >
-                    <span className="flex items-center gap-3">
-                      <input
-                        type="radio"
-                        value={option.vehicle.id}
-                        {...form.register("vehicleId")}
-                      />
-                      <span>
-                        <b>
-                          {option.vehicle.vehicleType.replace("_", " ")}
-                        </b>
-                        <br />
-                        <small>
-                          {option.vehicle.regNumber} ·{" "}
-                          {option.vehicle.capacityKg} kg
-                        </small>
+              {quote.options.length ? (
+                <div className="grid gap-3">
+                  {quote.options.map((option) => (
+                    <label
+                      key={option.vehicle.id}
+                      className="flex cursor-pointer items-center justify-between rounded-lg border p-4 has-[:checked]:border-indigo-600 has-[:checked]:bg-indigo-50"
+                    >
+                      <span className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          value={option.vehicle.id}
+                          {...form.register("vehicleId")}
+                        />
+                        <span>
+                          <b>
+                            {option.vehicle.vehicleType.replace("_", " ")}
+                          </b>
+                          <br />
+                          <small>
+                            {option.vehicle.regNumber} ·{" "}
+                            {option.vehicle.capacityKg} kg
+                          </small>
+                        </span>
                       </span>
-                    </span>
-                    <b>{currency(option.fare.total)}</b>
-                  </label>
-                ))}
-              </div>
+                      <b>{currency(option.fare.total)}</b>
+                    </label>
+                  ))}
+                  {form.formState.errors.vehicleId && (
+                    <p className="text-xs text-rose-600">
+                      {form.formState.errors.vehicleId.message}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500">
+                  No compliant vehicles are currently available for this route.
+                </p>
+              )}
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Pickup date & time">
+                <Field
+                  label="Pickup date & time"
+                  error={form.formState.errors.pickupAt?.message}
+                >
                   <Input
                     type="datetime-local"
                     {...form.register("pickupAt")}
@@ -150,23 +175,42 @@ export function BookingForm({
                 <Field label="Via (optional)">
                   <Input {...form.register("viaRoute")} />
                 </Field>
-                <Field label="Consignor">
+                <Field
+                  label="Consignor"
+                  error={form.formState.errors.consignorName?.message}
+                >
                   <Input {...form.register("consignorName")} />
                 </Field>
-                <Field label="Consignee">
+                <Field
+                  label="Consignee"
+                  error={form.formState.errors.consigneeName?.message}
+                >
                   <Input {...form.register("consigneeName")} />
                 </Field>
-                <Field label="Material">
+                <Field
+                  label="Material"
+                  error={form.formState.errors.materialDescription?.message}
+                >
                   <Input {...form.register("materialDescription")} />
                 </Field>
-                <Field label="Weight (kg)">
+                <Field
+                  label="Weight (kg)"
+                  error={form.formState.errors.weightKg?.message}
+                >
                   <Input type="number" {...form.register("weightKg")} />
                 </Field>
-                <Field label="Declared value">
+                <Field
+                  label="Declared value"
+                  error={form.formState.errors.declaredValue?.message}
+                >
                   <Input type="number" {...form.register("declaredValue")} />
                 </Field>
               </div>
-              <Button className="w-full" disabled={form.formState.isSubmitting}>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={form.formState.isSubmitting || quote.options.length === 0}
+              >
                 Reserve selected vehicle
               </Button>
             </>

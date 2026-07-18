@@ -5,15 +5,17 @@ import type { Location } from "@/types/domain";
 type LocationSelectProps = {
   label: string;
   locations: Location[];
+  error?: string;
 } & ComponentPropsWithoutRef<"select">;
 
 export function LocationSelect({
   label,
   locations,
+  error,
   ...props
 }: LocationSelectProps) {
   return (
-    <Field label={label}>
+    <Field label={label} error={error}>
       <select
         className="h-9 w-full rounded-md border bg-transparent px-3 text-sm"
         {...props}
