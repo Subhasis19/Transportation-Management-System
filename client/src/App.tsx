@@ -11,7 +11,24 @@ function App() {
     useAuthSession();
   const [message, setMessage] = useState("");
 
-  const request = useMemo(() => createApiClient(accessToken), [accessToken]);
+  const request = useMemo(
+    () =>
+      createApiClient(accessToken, {
+        onSessionRefreshed: (session) => {
+          const storedUser = user;
+          if (storedUser) {
+            saveAuthenticatedSession({
+              user: storedUser,
+              ...session,
+            });
+          }
+        },
+        onAuthenticationFailure: () => {
+          clearAuthSession();
+        },
+      }),
+    [accessToken, clearAuthSession, saveAuthenticatedSession, user],
+  );
   const {
     locations,
     quote,
