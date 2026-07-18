@@ -51,8 +51,7 @@ export function AdminOverviewDashboard({
       </Card>
     );
   const cards = [
-    ["Customers", dashboard.users.customers, ""],
-    ["Enabled Accounts", dashboard.users.enabledAccounts, ""],
+    ["Total Active Customers", dashboard.users.activeCustomers, ""],
     [
       "Recently Active",
       dashboard.users.recentlyActiveAccounts,
@@ -70,6 +69,11 @@ export function AdminOverviewDashboard({
       "Available with valid RC and permit",
     ],
     ["Pending Bookings", dashboard.bookings.pending, ""],
+    [
+      "Pending Invoices",
+      dashboard.bookings.delivered,
+      "Delivered bookings awaiting invoice generation",
+    ],
     ["Active Bookings", dashboard.bookings.active, ""],
     [
       "Monthly Booking Value",
@@ -100,7 +104,9 @@ export function AdminOverviewDashboard({
         {cards.map(([label, value, note]) => (
           <Card key={String(label)}>
             <CardHeader className="pb-2">
-              <CardDescription>{label}</CardDescription>
+              <CardDescription className="font-medium text-foreground/80">
+                {label}
+              </CardDescription>
               <CardTitle>{value}</CardTitle>
               {note && <CardDescription>{note}</CardDescription>}
             </CardHeader>
@@ -129,7 +135,7 @@ export function AdminOverviewDashboard({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Fleet status</CardTitle>
+            <CardTitle>Truck status</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 text-sm">
             {[

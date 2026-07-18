@@ -332,6 +332,7 @@ export type Dashboard = {
   generatedAt: string;
   users: {
     customers: number;
+    activeCustomers: number;
     enabledAccounts: number;
     recentlyActiveAccounts: number;
   };

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   clearStoredSession,
   getStoredAccessToken,
@@ -11,17 +11,17 @@ export function useAuthSession() {
   const [user, setUser] = useState(getStoredUser);
   const [accessToken, setAccessToken] = useState(getStoredAccessToken);
 
-  function saveAuthenticatedSession(session: AuthSession) {
+  const saveAuthenticatedSession = useCallback((session: AuthSession) => {
     saveStoredSession(session);
     setAccessToken(session.accessToken);
     setUser(session.user);
-  }
+  }, []);
 
-  function signOut() {
+  const signOut = useCallback(() => {
     clearStoredSession();
     setUser(null);
     setAccessToken("");
-  }
+  }, []);
 
   return { user, accessToken, saveAuthenticatedSession, signOut };
 }

@@ -23,7 +23,7 @@ export function AppShell({
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
           <div>
             <p className="font-heading text-xl font-semibold tracking-wide">
-              TRUCKLINE
+              TRUCKLINK
             </p>
             <p className="text-xs text-muted-foreground">
               Transportation management, made clear
@@ -41,7 +41,13 @@ export function AppShell({
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div
+        className={
+          user.role === "ADMIN"
+            ? "w-full px-6 pb-8 pt-4"
+            : "mx-auto max-w-6xl px-6 py-8"
+        }
+      >
         {message && (
           <p className="mb-5 rounded-md bg-primary/10 px-4 py-3 text-sm text-primary">
             {message}

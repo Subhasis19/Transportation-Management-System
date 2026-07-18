@@ -31,6 +31,7 @@ export async function getDashboardData() {
   );
   const [
     customers,
+    activeCustomers,
     enabledAccounts,
     recentlyActiveAccounts,
     driverTotal,
@@ -45,6 +46,7 @@ export async function getDashboardData() {
     recentBookings,
   ] = await Promise.all([
     prisma.user.count({ where: { role: Role.CUSTOMER } }),
+    prisma.user.count({ where: { role: Role.CUSTOMER, isActive: true } }),
     prisma.user.count({ where: { isActive: true } }),
     prisma.user.count({
       where: { isActive: true, lastLoginAt: { gte: getActiveUserCutoff(now) } },
@@ -138,7 +140,12 @@ export async function getDashboardData() {
   const invoiced = bookingCount(bookingStatuses, BookingStatus.INVOICED);
   return {
     generatedAt: now,
-    users: { customers, enabledAccounts, recentlyActiveAccounts },
+    users: {
+      customers,
+      activeCustomers,
+      enabledAccounts,
+      recentlyActiveAccounts,
+    },
     drivers: {
       total: driverTotal,
       enabled: driverEnabled,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { AdminLocations } from "@/features/admin/admin-locations";
 import { AdminPricing } from "@/features/admin/admin-pricing";
@@ -11,6 +11,16 @@ import { AdminOverviewDashboard } from "@/features/admin/admin-overview-dashboar
 import type { ApiRequest } from "@/lib/api-client";
 import type { Dashboard, Report } from "@/types/domain";
 
+type AdminView =
+  | "overview"
+  | "locations"
+  | "routes"
+  | "pricing"
+  | "vehicles"
+  | "drivers"
+  | "users"
+  | "bookings";
+
 type AdminWorkspaceProps = {
   dashboard: Dashboard | null;
   request: ApiRequest;
@@ -18,109 +28,48 @@ type AdminWorkspaceProps = {
   refresh: () => Promise<void>;
 };
 
+const navigationItems: ReadonlyArray<readonly [AdminView, string]> = [
+  ["overview", "Overview"],
+  ["locations", "Locations"],
+  ["routes", "Routes"],
+  ["pricing", "Pricing"],
+  ["vehicles", "Vehicles"],
+  ["drivers", "Drivers"],
+  ["users", "Users"],
+  ["bookings", "Bookings"],
+];
+
 export function AdminWorkspace({
   dashboard,
   request,
   report,
   refresh,
 }: AdminWorkspaceProps) {
-  const [view, setView] = useState<
-    | "overview"
-    | "locations"
-    | "routes"
-    | "pricing"
-    | "vehicles"
-    | "drivers"
-    | "users"
-    | "bookings"
-  >("overview");
-  const navigation = (
-    <div className="flex flex-wrap gap-2">
-      {(
-        [
-          ["overview", "Overview"],
-          ["locations", "Locations"],
-          ["routes", "Routes"],
-          ["pricing", "Pricing"],
-          ["vehicles", "Vehicles"],
-          ["drivers", "Drivers"],
-          ["users", "Users"],
-          ["bookings", "Bookings"],
-        ] as const
-      ).map(([target, label]) => (
-        <Button
-          key={target}
-          variant={view === target ? "default" : "outline"}
-          onClick={() => setView(target)}
-        >
-          {label}
-        </Button>
-      ))}
-    </div>
-  );
+  const [view, setView] = useState<AdminView>("overview");
+  let content: ReactNode;
+
   if (view === "locations") {
-    return (
-      <div className="space-y-4">
-        {navigation}
-        <AdminLocations request={request} report={report} />
-      </div>
+    content = <AdminLocations request={request} report={report} />;
+  } else if (view === "routes") {
+    content = <AdminRoutes request={request} report={report} />;
+  } else if (view === "pricing") {
+    content = <AdminPricing request={request} report={report} />;
+  } else if (view === "vehicles") {
+    content = <AdminVehicles request={request} report={report} />;
+  } else if (view === "drivers") {
+    content = <AdminDrivers request={request} report={report} />;
+  } else if (view === "users") {
+    content = <AdminUsers request={request} report={report} />;
+  } else if (view === "bookings") {
+    content = (
+      <AdminBookingOperations
+        request={request}
+        report={report}
+        refreshDashboard={refresh}
+      />
     );
-  }
-  if (view === "routes") {
-    return (
-      <div className="space-y-4">
-        {navigation}
-        <AdminRoutes request={request} report={report} />
-      </div>
-    );
-  }
-  if (view === "pricing") {
-    return (
-      <div className="space-y-4">
-        {navigation}
-        <AdminPricing request={request} report={report} />
-      </div>
-    );
-  }
-  if (view === "vehicles") {
-    return (
-      <div className="space-y-4">
-        {navigation}
-        <AdminVehicles request={request} report={report} />
-      </div>
-    );
-  }
-  if (view === "drivers") {
-    return (
-      <div className="space-y-4">
-        {navigation}
-        <AdminDrivers request={request} report={report} />
-      </div>
-    );
-  }
-  if (view === "users") {
-    return (
-      <div className="space-y-4">
-        {navigation}
-        <AdminUsers request={request} report={report} />
-      </div>
-    );
-  }
-  if (view === "bookings") {
-    return (
-      <div className="space-y-4">
-        {navigation}
-        <AdminBookingOperations
-          request={request}
-          report={report}
-          refreshDashboard={refresh}
-        />
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-7">
-      {navigation}
+  } else {
+    content = (
       <AdminOverviewDashboard
         dashboard={dashboard}
         request={request}
@@ -128,6 +77,34 @@ export function AdminWorkspace({
         refreshDashboard={refresh}
         onNavigate={setView}
       />
+    );
+  }
+
+  return (
+    <div className="min-h-[calc(100vh-8rem)] flex flex-col gap-6 lg:grid lg:grid-cols-[240px_minmax(0,1fr)]">
+      <aside className="shrink-0 lg:sticky lg:top-4 lg:self-start">
+        <div className="rounded-lg border bg-card p-3">
+          <p className="px-3 pb-3 text-sm font-semibold text-muted-foreground">
+            Admin panel
+          </p>
+          <nav
+            aria-label="Admin navigation"
+            className="flex w-full gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0"
+          >
+            {navigationItems.map(([target, label]) => (
+              <Button
+                key={target}
+                className="shrink-0 justify-start lg:w-full"
+                variant={view === target ? "default" : "outline"}
+                onClick={() => setView(target)}
+              >
+                {label}
+              </Button>
+            ))}
+          </nav>
+        </div>
+      </aside>
+      <section className="min-w-0 w-full">{content}</section>
     </div>
   );
 }
