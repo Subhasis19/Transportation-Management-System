@@ -150,8 +150,8 @@ export async function confirmBooking(bookingId: string, driverId: string) {
       throw new AppError(409, lifecycleConflictMessage);
     return prisma.booking.findUniqueOrThrow({ where: { id: booking.id } });
   } catch (error) {
-    if (error instanceof AppError) throw error;
     await prisma.booking.updateMany(confirmationCompensation(booking.id));
+    if (error instanceof AppError) throw error;
     throw new AppError(500, "Unable to generate lorry receipt");
   }
 }
@@ -247,8 +247,8 @@ export async function deliverBooking(
       throw new AppError(409, lifecycleConflictMessage);
     return prisma.booking.findUniqueOrThrow({ where: { id: bookingId } });
   } catch (error) {
-    if (error instanceof AppError) throw error;
     await prisma.booking.updateMany(invoiceCompensation(bookingId));
+    if (error instanceof AppError) throw error;
     throw new AppError(500, "Unable to generate invoice");
   }
 }

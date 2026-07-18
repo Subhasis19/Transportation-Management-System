@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { randomBytes } from "node:crypto";
 import { AppError } from "../../common/errors/app-error";
 import { BookingStatus, Prisma, Role } from "../../generated/prisma/client";
+import { setUserAccessRevoked } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import type {
     AdminDriverQuery,
@@ -259,7 +260,7 @@ export async function updateDriverStatus(
     input: UpdateDriverStatusInput,
 ) {
     try {
-        return await prisma.$transaction(async (tx) => {
+        const driver = await prisma.$transaction(async (tx) => {
             const current = await tx.user.findFirst({
                 where: { id: driverId, role: Role.DRIVER },
                 select: adminDriverSelect,
@@ -292,6 +293,8 @@ export async function updateDriverStatus(
             }
             return toAdminDriver(driver);
         });
+        setUserAccessRevoked(driverId, !input.isActive);
+        return driver;
     } catch (error) {
         throw mapDriverError(error);
     }

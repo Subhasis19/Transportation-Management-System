@@ -4,7 +4,11 @@ import { prisma } from "../../lib/prisma";
 import { signedDocumentUrl } from "../../lib/storage";
 import { calculateFare } from "../../services/fare";
 import type { CreateBookingInput } from "./booking.schema";
-import { bookingInclude, isVehicleCompliant } from "./booking.shared";
+import {
+    bookingInclude,
+    isVehicleCompliant,
+    toBookingResponse,
+} from "./booking.shared";
 import { isWeightWithinVehicleCapacity } from "./booking.rules";
 import { buildUsableRouteWhere } from "../routes/route.rules";
 
@@ -48,7 +52,7 @@ export async function createBooking(customerId: string, input: CreateBookingInpu
             gstPercent: Number(vehicle.rateCard.gstPercent),
         });
 
-        return tx.booking.create({
+        return toBookingResponse(await tx.booking.create({
             data: {
                 ...input,
                 customerId,
@@ -61,7 +65,7 @@ export async function createBooking(customerId: string, input: CreateBookingInpu
                 estimatedFare: fare.total,
             },
             include: bookingInclude,
-        });
+        }));
     });
 }
 
@@ -73,11 +77,12 @@ export async function getBookingsForUser(userId: string, role: Role) {
                 ? { driverId: userId }
                 : {};
 
-    return prisma.booking.findMany({
+    const bookings = await prisma.booking.findMany({
         where,
         include: bookingInclude,
         orderBy: { createdAt: "desc" },
     });
+    return bookings.map(toBookingResponse);
 }
 
 export async function getBookingDocumentUrl(bookingId: string, kind: string, userId: string, role: Role) {

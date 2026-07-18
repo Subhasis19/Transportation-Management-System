@@ -1,5 +1,6 @@
 import { AppError } from "../../common/errors/app-error";
 import { BookingStatus, Prisma, Role } from "../../generated/prisma/client";
+import { setUserAccessRevoked } from "../../lib/auth";
 import { prisma } from "../../lib/prisma";
 import {
   activeDriverAssignmentStatuses,
@@ -193,7 +194,7 @@ export async function updateUserStatus(
 ) {
   const now = new Date();
   try {
-    return await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx) => {
       const current = await tx.user.findUnique({
         where: { id: userId },
         select: adminUserDetailSelect,
@@ -253,6 +254,8 @@ export async function updateUserStatus(
       }
       return toAdminUser(user, currentAdminId, now);
     });
+    setUserAccessRevoked(userId, !input.isActive);
+    return user;
   } catch (error) {
     throw mapUserError(error);
   }

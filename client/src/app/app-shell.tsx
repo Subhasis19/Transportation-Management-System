@@ -7,7 +7,7 @@ import type { User } from "@/types/domain";
 type AppShellProps = {
   user: User;
   message: string;
-  onSignOut: () => void;
+  onSignOut: () => void | Promise<void>;
   children: ReactNode;
 };
 
@@ -35,7 +35,11 @@ export function AppShell({
               {user.name}
             </span>
             <ModeToggle />
-            <Button variant="outline" size="sm" onClick={onSignOut}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void onSignOut()}
+            >
               Sign out
             </Button>
           </div>

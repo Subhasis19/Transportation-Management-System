@@ -74,7 +74,11 @@ function refreshAuthentication(): Promise<RefreshResponse> {
 }
 
 function isUnauthenticatedPath(path: string) {
-  return path.startsWith("/auth/");
+  return (
+    path === "/auth/login" ||
+    path === "/auth/register" ||
+    path === "/auth/refresh"
+  );
 }
 
 export function createApiClient(
@@ -85,11 +89,17 @@ export function createApiClient(
     path: string,
     options: RequestInit = {},
   ): Promise<ResponseBody> => {
-    const send = async (token: string) => {
-      const headers = new Headers(options.headers);
+    const send = async (
+      token: string,
+      requestOptions: RequestInit = options,
+    ) => {
+      const headers = new Headers(requestOptions.headers);
       headers.set("Content-Type", "application/json");
       if (token) headers.set("Authorization", `Bearer ${token}`);
-      const response = await fetch(`${API}${path}`, { ...options, headers });
+      const response = await fetch(`${API}${path}`, {
+        ...requestOptions,
+        headers,
+      });
       return { response, body: await readResponse(response) };
     };
 
@@ -123,7 +133,14 @@ export function createApiClient(
     }
 
     callbacks.onSessionRefreshed?.(session);
-    const retried = await send(session.accessToken);
+    const retryOptions =
+      path === "/auth/logout"
+        ? {
+            ...options,
+            body: JSON.stringify({ refreshToken: session.refreshToken }),
+          }
+        : options;
+    const retried = await send(session.accessToken, retryOptions);
     if (!retried.response.ok) {
       if (
         retried.response.status === 401 &&

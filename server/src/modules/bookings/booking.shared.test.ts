@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isVehicleCompliant } from "./booking.shared";
+import { isVehicleCompliant, toBookingResponse } from "./booking.shared";
+
+test("booking responses do not expose private document storage paths", () => {
+  const response = toBookingResponse({
+    id: "booking-123",
+    lrPdfUrl: "lr/booking-123.pdf",
+    invoicePdfUrl: "invoices/booking-123.pdf",
+  });
+
+  assert.deepEqual(response, {
+    id: "booking-123",
+    lrPdfUrl: "/bookings/booking-123/documents/lr",
+    invoicePdfUrl: "/bookings/booking-123/documents/invoice",
+  });
+});
 
 test("vehicle compliance requires future RC and permit dates", () => {
   const now = new Date();
