@@ -1,4 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRef } from "react";
 import { useForm } from "react-hook-form";
 import { Field } from "@/components/shared/field";
 import { LocationSelect } from "@/components/shared/location-select";
@@ -34,6 +35,7 @@ export function BookingForm({
   onBooked,
   report,
 }: BookingFormProps) {
+  const quoteRequestId = useRef(0);
   const form = useForm<BookingFormInput, unknown, BookingFormValues>({
     resolver: zodResolver(bookingSchema),
     defaultValues: {
@@ -49,6 +51,15 @@ export function BookingForm({
       viaRoute: "",
     },
   });
+
+  const clearQuote = () => {
+    quoteRequestId.current += 1;
+    setQuote(null);
+    form.setValue("vehicleId", "");
+  };
+  const fromLocation = form.register("fromLocationId");
+  const toLocation = form.register("toLocationId");
+
   const findQuote = async () => {
     const locationsAreValid = await form.trigger([
       "fromLocationId",
@@ -59,15 +70,20 @@ export function BookingForm({
       return;
     }
 
+    const requestId = ++quoteRequestId.current;
+    setQuote(null);
+    form.setValue("vehicleId", "");
+
     try {
       const { fromLocationId, toLocationId } = form.getValues();
-      setQuote(
-        await request<Quote>(
-          `/quotes?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}`,
-        ),
+      const nextQuote = await request<Quote>(
+        `/quotes?fromLocationId=${fromLocationId}&toLocationId=${toLocationId}`,
       );
+      if (requestId === quoteRequestId.current) setQuote(nextQuote);
     } catch (error) {
-      report(error instanceof Error ? error.message : "Unable to quote route");
+      if (requestId === quoteRequestId.current) {
+        report(error instanceof Error ? error.message : "Unable to quote route");
+      }
     }
   };
   const submit = async (values: BookingFormValues) => {
@@ -104,13 +120,21 @@ export function BookingForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <LocationSelect
               label="From"
-              {...form.register("fromLocationId")}
+              {...fromLocation}
+              onChange={(event) => {
+                fromLocation.onChange(event);
+                clearQuote();
+              }}
               locations={locations}
               error={form.formState.errors.fromLocationId?.message}
             />
             <LocationSelect
               label="To"
-              {...form.register("toLocationId")}
+              {...toLocation}
+              onChange={(event) => {
+                toLocation.onChange(event);
+                clearQuote();
+              }}
               locations={locations}
               error={form.formState.errors.toLocationId?.message}
             />

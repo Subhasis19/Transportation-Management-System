@@ -70,9 +70,9 @@ export function AdminOverviewDashboard({
     ],
     ["Pending Bookings", dashboard.bookings.pending, ""],
     [
-      "Pending Invoices",
-      dashboard.bookings.delivered,
-      "Delivered bookings awaiting invoice generation",
+      "Invoiced Bookings",
+      dashboard.bookings.invoiced,
+      "Bookings with completed delivery and invoicing",
     ],
     ["Active Bookings", dashboard.bookings.active, ""],
     [

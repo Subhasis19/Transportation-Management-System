@@ -129,11 +129,11 @@ export async function confirmBooking(bookingId: string, driverId: string) {
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     ),
   );
-  const complete = await prisma.booking.findUniqueOrThrow({
-    where: { id: booking.id },
-    include: { vehicle: true },
-  });
   try {
+    const complete = await prisma.booking.findUniqueOrThrow({
+      where: { id: booking.id },
+      include: { vehicle: true },
+    });
     const lrPdfUrl = await createLorryReceipt(
       complete,
       complete.vehicle.regNumber,
