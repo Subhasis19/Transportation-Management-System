@@ -19,12 +19,19 @@ type BookingListProps = {
 
 export function BookingList({ bookings, request, report }: BookingListProps) {
   const documentUrl = async (id: string, kind: "lr" | "invoice") => {
+    const documentWindow = window.open("", "_blank");
+    if (documentWindow) documentWindow.opener = null;
     try {
       const { url } = await request<{ url: string }>(
         `/bookings/${id}/documents/${kind}`,
       );
-      window.open(url, "_blank", "noopener,noreferrer");
+      if (documentWindow) {
+        documentWindow.location.replace(url);
+      } else {
+        window.location.assign(url);
+      }
     } catch (error) {
+      documentWindow?.close();
       report(error instanceof Error ? error.message : "Document unavailable");
     }
   };

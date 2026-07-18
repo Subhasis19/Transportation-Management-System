@@ -5,7 +5,12 @@ import jwt from "jsonwebtoken";
 import type { NextFunction, Response } from "express";
 import type { AuthRequest } from "./auth";
 
-const { allow, authenticate, signAccessToken } = await import("./auth");
+const {
+  allow,
+  authenticate,
+  setUserAccessRevoked,
+  signAccessToken,
+} = await import("./auth");
 const { Role } = await import("../generated/prisma/client");
 
 function authenticateToken(token: string | undefined) {
@@ -106,6 +111,26 @@ test("authenticate accepts a valid configured access token", () => {
 
   assert.equal(result.nextCalled, true);
   assert.equal(result.request.user?.id, "user-123");
+});
+
+test("authenticate rejects access for a user revoked after sign-in", () => {
+  const token = signAccessToken({
+    id: "revoked-user",
+    role: Role.CUSTOMER,
+    email: "revoked@example.com",
+  });
+  setUserAccessRevoked("revoked-user", true);
+
+  try {
+    const result = authenticateToken(token);
+    assert.equal(result.nextCalled, false);
+    assert.equal(result.statusCode, 401);
+    assert.deepEqual(result.body, {
+      message: "Invalid or expired access token",
+    });
+  } finally {
+    setUserAccessRevoked("revoked-user", false);
+  }
 });
 
 test("allow calls next for an allowed role", () => {

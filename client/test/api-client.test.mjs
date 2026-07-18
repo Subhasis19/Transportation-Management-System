@@ -201,3 +201,39 @@ test("does not refresh failed login or registration requests", async () => {
 
   assert.deepEqual(paths, ["/auth/login", "/auth/register"]);
 });
+
+test("logout refreshes an expired access token and revokes the rotated refresh token", async () => {
+  saveSession(globalThis.localStorage);
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    const path = new URL(String(url)).pathname;
+    const body =
+      typeof options.body === "string" ? JSON.parse(options.body) : null;
+    calls.push({
+      path,
+      authorization: new Headers(options.headers).get("Authorization"),
+      body,
+    });
+
+    if (path === "/auth/refresh") {
+      return jsonResponse(200, {
+        accessToken: "access-new",
+        refreshToken: "refresh-new",
+      });
+    }
+    if (calls.filter((call) => call.path === "/auth/logout").length === 1) {
+      return jsonResponse(401, { message: "Expired" });
+    }
+    return new Response(null, { status: 204 });
+  };
+
+  await createApiClient("expired")("/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({ refreshToken: "refresh-old" }),
+  });
+
+  assert.equal(calls.length, 3);
+  assert.deepEqual(calls[0].body, { refreshToken: "refresh-old" });
+  assert.equal(calls[2].authorization, "Bearer access-new");
+  assert.deepEqual(calls[2].body, { refreshToken: "refresh-new" });
+});

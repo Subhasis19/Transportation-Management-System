@@ -4,6 +4,7 @@ import { Workspace } from "@/app/workspace";
 import { AuthScreen } from "@/features/auth/auth-screen";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { useWorkspace } from "@/hooks/use-workspace";
+import { getStoredRefreshToken } from "@/lib/session-storage";
 import { createApiClient } from "./lib/api-client";
 
 function App() {
@@ -43,9 +44,22 @@ function App() {
     saveAuthenticatedSession(payload);
     setMessage(`Welcome, ${payload.user.name}`);
   }
-  function signOut() {
-    clearAuthSession();
-    clearWorkspace();
+  async function signOut() {
+    const refreshToken = getStoredRefreshToken();
+    try {
+      if (refreshToken) {
+        await request<void>("/auth/logout", {
+          method: "POST",
+          body: JSON.stringify({ refreshToken }),
+        });
+      }
+    } catch {
+      // Local sign-out must still complete if the server cannot be reached.
+    } finally {
+      clearAuthSession();
+      clearWorkspace();
+      setMessage("");
+    }
   }
 
   if (!user)

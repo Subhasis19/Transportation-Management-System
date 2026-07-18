@@ -12,6 +12,7 @@ import {
 import { getAdminBookingDetail, getAdminBookings } from "./booking-admin.service";
 import { createBooking, getBookingDocumentUrl, getBookingsForUser } from "./booking.service";
 import { cancelBooking, closeBooking, confirmBooking as confirmBookingLifecycle, departBooking, deliverBooking as deliverBookingLifecycle } from "./booking-lifecycle.service";
+import { toBookingResponse } from "./booking.shared";
 
 export async function createBookingHandler(req: AuthRequest, res: Response) {
     const input = createBookingSchema.parse(req.body);
@@ -34,29 +35,29 @@ export async function getAdminBookingDetailHandler(req: AuthRequest, res: Respon
 export async function confirmBookingHandler(req: AuthRequest, res: Response) {
     const { id } = bookingIdParamsSchema.parse(req.params);
     const { driverId } = confirmBookingSchema.parse(req.body);
-    res.json(await confirmBookingLifecycle(id, driverId));
+    res.json(toBookingResponse(await confirmBookingLifecycle(id, driverId)));
 }
 
 export async function departBookingHandler(req: AuthRequest, res: Response) {
     const { id } = bookingIdParamsSchema.parse(req.params);
-    res.json(await departBooking(id));
+    res.json(toBookingResponse(await departBooking(id)));
 }
 
 export async function deliverBookingHandler(req: AuthRequest, res: Response) {
     const { id } = bookingIdParamsSchema.parse(req.params);
     const { notes } = deliverBookingSchema.parse(req.body);
-    res.json(await deliverBookingLifecycle(id, req.user!.id, notes));
+    res.json(toBookingResponse(await deliverBookingLifecycle(id, req.user!.id, notes)));
 }
 
 export async function closeBookingHandler(req: AuthRequest, res: Response) {
     const { id } = bookingIdParamsSchema.parse(req.params);
-    res.json(await closeBooking(id));
+    res.json(toBookingResponse(await closeBooking(id)));
 }
 
 export async function cancelBookingHandler(req: AuthRequest, res: Response) {
     const { id } = bookingIdParamsSchema.parse(req.params);
     const { reason } = cancelBookingSchema.parse(req.body);
-    res.json(await cancelBooking(id, reason));
+    res.json(toBookingResponse(await cancelBooking(id, reason)));
 }
 
 export async function getBookingDocumentHandler(req: AuthRequest, res: Response) {

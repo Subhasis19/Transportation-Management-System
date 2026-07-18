@@ -10,9 +10,18 @@ import { z } from "zod";
 
 const accessSecret = env.JWT_ACCESS_SECRET;
 const refreshSecret = env.JWT_REFRESH_SECRET;
+const revokedAccessUsers = new Set<string>();
 
 export type AuthUser = { id: string; role: Role; email: string };
 export type AuthRequest = Request & { user?: AuthUser };
+
+export function setUserAccessRevoked(userId: string, revoked: boolean) {
+  if (revoked) {
+    revokedAccessUsers.add(userId);
+    return;
+  }
+  revokedAccessUsers.delete(userId);
+}
 
 const accessTokenPayloadSchema = z.object({
   id: z.string().min(1),
@@ -112,6 +121,9 @@ export function authenticate(
     req.user = accessTokenPayloadSchema.parse(
       jwt.verify(token, accessSecret, { algorithms: ["HS256"] }),
     );
+    if (revokedAccessUsers.has(req.user.id)) {
+      return res.status(401).json({ message: "Invalid or expired access token" });
+    }
     next();
   } catch {
     return res.status(401).json({ message: "Invalid or expired access token" });
