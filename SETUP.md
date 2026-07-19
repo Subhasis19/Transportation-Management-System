@@ -1,87 +1,103 @@
-# Setup Instructions
+# TruckLink TMS Setup
 
-## Prerequisites
+## Requirements
 
-- Node.js 20+
-- Git
-- A Supabase project with PostgreSQL and Storage
+- Node.js 24
+- A Supabase project with PostgreSQL and Storage enabled
 
-## Install
+## Install dependencies
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/tms-saas.git
-cd tms-saas
-(cd server && npm install)
-(cd client && npm install)
+git clone https://github.com/Subhasis19/Transportation-Management-System.git TruckLink-tms
+cd TruckLink-tms
+
+cd server
+npm ci
+
+cd ../client
+npm ci
 ```
 
-## Supabase
+## Configure Supabase
 
-1. Create a **private** Storage bucket named `tms-documents`.
-2. Copy the database connection string from **Project Settings → Database**.
-3. Copy the project URL and **service-role key** from **Project Settings → API**. The service-role key is server-only and must never be used in React.
+1. Create a private Storage bucket named `tms-documents`.
+2. Copy the PostgreSQL connection string from Supabase project settings.
+3. Copy the project URL and service-role key from Supabase API settings.
 
-## Environment files
+The service-role key is server-only. Do not add it to the client or commit it to Git.
 
-Copy `server/.env.example` to `server/.env` and fill in all values:
+## Create environment files
+
+Create `server/.env`:
 
 ```env
-DATABASE_URL="your-supabase-postgres-connection-string"
+NODE_ENV="development"
 PORT=5000
 FRONTEND_URL="http://localhost:5173"
-JWT_ACCESS_SECRET="a-long-random-secret"
-JWT_REFRESH_SECRET="a-different-long-random-secret"
+TRUST_PROXY="false"
+DATABASE_URL="your-supabase-postgres-connection-string"
+JWT_ACCESS_SECRET="at-least-32-characters"
+JWT_REFRESH_SECRET="a-different-secret-of-at-least-32-characters"
 SUPABASE_URL="https://your-project.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY="server-only-service-role-key"
 SUPABASE_STORAGE_BUCKET="tms-documents"
 ```
 
-Copy `client/.env.example` to `client/.env`:
+Create `client/.env`:
 
 ```env
 VITE_API_URL="http://localhost:5000"
 ```
 
-Never put secrets, database URLs, or the service-role key in `client/.env`; `VITE_` values are visible in the browser.
-
-## Database and demo data
+## Prepare the database
 
 ```bash
 cd server
-npx prisma generate
+npm run generate
 npx prisma migrate dev
 npm run seed
 ```
 
-## Run
+## Run locally
+
+Start the API:
 
 ```bash
-# terminal 1
 cd server
 npm run dev
 ```
 
+Start the frontend in a second terminal:
+
 ```bash
-# terminal 2
 cd client
 npm run dev
 ```
 
-Visit `http://localhost:5173`.
+Open `http://localhost:5173`. The API health endpoint is available at `http://localhost:5000/health`.
 
-## Demo walkthrough
+## Production server commands
 
-1. Customer: quote Delhi → Jaipur and reserve a compliant vehicle.
-2. Admin: assign the seeded driver, confirm, then mark departure.
-3. Driver: submit a delivery note.
-4. Admin: close the invoiced trip.
-
-## Before GitHub
+Run these from `server/`:
 
 ```bash
-cd server && npm run build && npm run test:fare
-cd ../client && npm run build
-git status
+npm ci
+npm run generate
+npx prisma migrate deploy
+npm run build
+npm start
 ```
 
-The root `.gitignore` excludes `.env`, `node_modules`, build folders, and generated Prisma files. Never force-add `.env` files.
+Set `NODE_ENV="production"`, configure the production `FRONTEND_URL`, and set `TRUST_PROXY="true"` when deploying behind a reverse proxy such as Render.
+
+## Validate
+
+```bash
+cd server
+npm test
+npm run build
+
+cd ../client
+npm test
+npm run build
+```

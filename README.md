@@ -1,42 +1,45 @@
-# TruckLine TMS
+# TruckLink TMS
 
-A focused Transportation Management System for a single fleet operator. It supports route quoting, compliant vehicle reservation, driver dispatch, delivery confirmation, invoicing, and secure transport documents.
+TruckLink is a Transportation Management System for a single fleet operator. It supports vehicle quoting, booking, dispatch, delivery confirmation, invoicing, and secure transport documents.
 
-## Features
+## Capabilities
 
-- Customer, driver, and admin workspaces with role-based access
-- JWT access tokens and rotating, hashed refresh tokens
-- Route-matrix fare quote: base fare, distance charge, toll, GST, and total
-- Double-booking prevention and vehicle reservation
-- Vehicle RC/permit and driver-licence compliance checks
-- Booking lifecycle: `PENDING` → `CONFIRMED` → `IN_TRANSIT` → `INVOICED` → `CLOSED`
-- Admin APIs for vehicles, rate cards, locations, and routes
-- LR and invoice PDF generation with private Supabase Storage
+- Role-based customer, driver, and administrator workspaces
+- Route-based vehicle quotes with fare, toll, and GST calculation
+- Transactional vehicle reservation to prevent double booking
+- Driver, vehicle, and document compliance checks
+- Booking lifecycle from reservation through trip closure
+- Private lorry receipt and invoice PDF storage
 
-## Stack
+## Technology
 
-React, TypeScript, Vite, Tailwind CSS, shadcn/ui, React Hook Form, Zod, Node.js, Express, Prisma, PostgreSQL/Supabase, JWT, bcrypt, and PDFKit.
+- Frontend: React, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- Backend: Node.js, Express, TypeScript, Zod, JWT, bcrypt
+- Data: PostgreSQL, Prisma, Supabase Storage
+- Documents: PDFKit
 
-## Repository layout
+## Project structure
 
 ```text
-tms-saas/
-├── client/       # React application
-├── server/       # Express API, Prisma migrations, and seed data
+.
+├── client/          React application
+├── server/          Express API, Prisma schema, migrations, and seed data
 ├── README.md
 └── SETUP.md
 ```
 
 ## Quick start
 
-See [SETUP.md](SETUP.md). After configuration:
+Follow [SETUP.md](SETUP.md) to configure Supabase and environment variables. Then run the API and frontend in separate terminals:
 
 ```bash
-# terminal 1
-cd server && npm run dev
+cd server
+npm run dev
+```
 
-# terminal 2
-cd client && npm run dev
+```bash
+cd client
+npm run dev
 ```
 
 Open `http://localhost:5173`.
@@ -45,16 +48,25 @@ Open `http://localhost:5173`.
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Admin | `admin@fleetflow.demo` | `Demo@123` |
+| Administrator | `admin@fleetflow.demo` | `Demo@123` |
 | Driver | `driver@fleetflow.demo` | `Demo@123` |
 | Customer | `customer@fleetflow.demo` | `Demo@123` |
 
-Change demo credentials before any public deployment.
+## Common commands
 
-## Validation
+| Area | Command | Purpose |
+| --- | --- | --- |
+| Server | `npm run dev` | Start the development API |
+| Server | `npm run build` | Compile the production API |
+| Server | `npm start` | Run the compiled API |
+| Server | `npm test` | Run server tests |
+| Server | `npm run generate` | Generate Prisma Client |
+| Server | `npm run seed` | Seed demo data |
+| Client | `npm run dev` | Start the Vite development server |
+| Client | `npm run build` | Build the production frontend |
+| Client | `npm test` | Run client tests |
 
-```bash
-cd server && npm run build && npm run test:fare
-cd ../client && npm run build
-```
+## Documentation
 
+- [Setup guide](SETUP.md)
+- API health check: `GET /healthz`
