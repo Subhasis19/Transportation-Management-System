@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Field } from "@/components/shared/field";
@@ -30,6 +31,7 @@ export function AuthScreen({
   request,
 }: AuthScreenProps) {
   const [registering, setRegistering] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const form = useForm<AuthFormValues>({
     resolver: zodResolver(authSchema),
     defaultValues: { email: "", password: "", name: "", phone: "" },
@@ -93,7 +95,24 @@ export function AuthScreen({
               label="Password"
               error={form.formState.errors.password?.message}
             >
-              <Input type="password" {...form.register("password")} />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  className="pr-11"
+                  {...form.register("password")}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-0 right-0"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((visible) => !visible)}
+                >
+                  {showPassword ? <EyeOff /> : <Eye />}
+                </Button>
+              </div>
             </Field>
             <Button
               type="submit"
