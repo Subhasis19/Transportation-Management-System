@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { adminLocationQuerySchema, createLocationSchema, locationParamsSchema, updateLocationSchema, updateLocationStatusSchema } from "./location.schema";
+import { adminLocationQuerySchema, createLocationSchema, locationParamsSchema, updateLocationSchema, updateLocationStatusSchema } from "./location.schema.js";
 
 test("location write schemas normalize and reject invalid fields", () => {
   assert.deepEqual(createLocationSchema.parse({ cityName: "  New   Delhi " }), { cityName: "New Delhi" });

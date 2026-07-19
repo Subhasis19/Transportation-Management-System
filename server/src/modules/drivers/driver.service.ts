@@ -1,21 +1,21 @@
 import bcrypt from "bcrypt";
 import { randomBytes } from "node:crypto";
-import { AppError } from "../../common/errors/app-error";
-import { BookingStatus, Prisma, Role } from "../../generated/prisma/client";
-import { setUserAccessRevoked } from "../../lib/auth";
-import { prisma } from "../../lib/prisma";
+import { AppError } from "../../common/errors/app-error.js";
+import { BookingStatus, Prisma, Role } from "../../generated/prisma/client.js";
+import { setUserAccessRevoked } from "../../lib/auth.js";
+import { prisma } from "../../lib/prisma.js";
 import type {
     AdminDriverQuery,
     CreateDriverInput,
     UpdateDriverInput,
     UpdateDriverStatusInput,
-} from "./driver.schema";
+} from "./driver.schema.js";
 import {
     activeDriverAssignmentStatuses,
     getDriverLicenseStatus,
     getDriverLicenseStatusWhere,
     isDriverLicenseValid,
-} from "./driver.rules";
+} from "./driver.rules.js";
 
 const activeAssignmentStatusFilter: BookingStatus[] = [
     ...activeDriverAssignmentStatuses,

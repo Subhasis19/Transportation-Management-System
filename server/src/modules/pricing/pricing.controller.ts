@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { updatePricingSchema, vehicleTypeParamsSchema } from "./pricing.schema";
-import { getRateCards, updateRateCard } from "./pricing.service";
+import { updatePricingSchema, vehicleTypeParamsSchema } from "./pricing.schema.js";
+import { getRateCards, updateRateCard } from "./pricing.service.js";
 
 export async function listRateCards(_req: Request, res: Response) {
     res.json(await getRateCards());

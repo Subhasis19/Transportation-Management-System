@@ -5,13 +5,13 @@ import {
     updateVehicleSchema,
     updateVehicleStatusSchema,
     vehicleIdParamsSchema,
-} from "./vehicle.schema";
+} from "./vehicle.schema.js";
 import {
     createVehicle,
     getVehicles,
     updateVehicle,
     updateVehicleStatus,
-} from "./vehicle.service";
+} from "./vehicle.service.js";
 
 export async function listVehicles(req: Request, res: Response) {
     res.json(await getVehicles(adminVehicleQuerySchema.parse(req.query)));

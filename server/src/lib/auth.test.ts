@@ -1,17 +1,17 @@
-import "../test/test-env";
+import "../test/test-env.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import jwt from "jsonwebtoken";
 import type { NextFunction, Response } from "express";
-import type { AuthRequest } from "./auth";
+import type { AuthRequest } from "./auth.js";
 
 const {
   allow,
   authenticate,
   setUserAccessRevoked,
   signAccessToken,
-} = await import("./auth");
-const { Role } = await import("../generated/prisma/client");
+} = await import("./auth.js");
+const { Role } = await import("../generated/prisma/client.js");
 
 function authenticateToken(token: string | undefined) {
   let statusCode = 0;

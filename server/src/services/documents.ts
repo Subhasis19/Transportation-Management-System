@@ -1,6 +1,6 @@
 import PDFDocument from "pdfkit";
-import type { Booking } from "../generated/prisma/client";
-import { uploadPrivatePdf } from "../lib/storage";
+import type { Booking } from "../generated/prisma/client.js";
+import { uploadPrivatePdf } from "../lib/storage.js";
 
 type PdfUploader = typeof uploadPrivatePdf;
 

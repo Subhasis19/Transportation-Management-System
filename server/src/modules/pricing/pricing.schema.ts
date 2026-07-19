@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { vehicleTypes } from "../vehicles/vehicle.schema";
+import { vehicleTypes } from "../vehicles/vehicle.schema.js";
 
 const hasAtMostTwoDecimalPlaces = (value: number) => {
     const scaled = value * 100;

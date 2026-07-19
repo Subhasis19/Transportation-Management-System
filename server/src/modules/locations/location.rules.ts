@@ -12,5 +12,5 @@ export function buildAdminLocationWhere(query: AdminLocationQuery): Prisma.Locat
     ...(query.status === "all" ? {} : { isActive: query.status === "active" }),
   };
 }
-import type { Prisma } from "../../generated/prisma/client";
-import type { AdminLocationQuery } from "./location.schema";
+import type { Prisma } from "../../generated/prisma/client.js";
+import type { AdminLocationQuery } from "./location.schema.js";

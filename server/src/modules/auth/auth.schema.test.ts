@@ -4,7 +4,7 @@ import {
   loginSchema,
   refreshTokenSchema,
   registerSchema,
-} from "./auth.schema";
+} from "./auth.schema.js";
 
 const validRegistration = {
   name: "  Test User  ",

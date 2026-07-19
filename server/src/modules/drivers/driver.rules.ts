@@ -1,4 +1,4 @@
-import { BookingStatus, Prisma } from "../../generated/prisma/client";
+import { BookingStatus, Prisma } from "../../generated/prisma/client.js";
 
 export const activeDriverAssignmentStatuses = [
     BookingStatus.CONFIRMED,

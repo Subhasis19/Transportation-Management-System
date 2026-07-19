@@ -1,14 +1,14 @@
-import "../../test/test-env";
+import "../../test/test-env.js";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { AppError } from "../../common/errors/app-error";
-import { BookingStatus } from "../../generated/prisma/client";
+import { AppError } from "../../common/errors/app-error.js";
+import { BookingStatus } from "../../generated/prisma/client.js";
 import {
   confirmationCompensation,
   invoiceCompensation,
   retryConfirmationTransaction,
   retryLifecycleTransaction,
-} from "./booking-lifecycle.service";
+} from "./booking-lifecycle.service.js";
 
 test("LR compensation clears confirmation-only fields", () => {
   assert.deepEqual(confirmationCompensation("booking-123"), {

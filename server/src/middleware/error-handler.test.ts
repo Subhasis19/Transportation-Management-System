@@ -3,8 +3,8 @@ import test from "node:test";
 import express from "express";
 import request from "supertest";
 import { z } from "zod";
-import { AppError } from "../common/errors/app-error";
-import { errorHandler } from "./error-handler";
+import { AppError } from "../common/errors/app-error.js";
+import { errorHandler } from "./error-handler.js";
 
 function createErrorApp(error: unknown) {
   const app = express();

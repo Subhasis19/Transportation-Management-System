@@ -1,14 +1,14 @@
-import { AppError } from "../../common/errors/app-error";
+import { AppError } from "../../common/errors/app-error.js";
 import {
   BookingStatus,
   Prisma,
   Role,
   VehicleStatus,
-} from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
-import { createInvoice, createLorryReceipt } from "../../services/documents";
-import { isVehicleCompliant } from "./booking.shared";
-import { canAssignDriverToActiveTrip } from "./booking.rules";
+} from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { createInvoice, createLorryReceipt } from "../../services/documents.js";
+import { isVehicleCompliant } from "./booking.shared.js";
+import { canAssignDriverToActiveTrip } from "./booking.rules.js";
 
 const lifecycleAttempts = 3;
 const lifecycleConflictMessage = "Booking lifecycle conflict; please try again";

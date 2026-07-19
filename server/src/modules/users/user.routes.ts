@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { Role } from "../../generated/prisma/client";
-import { allow, authenticate } from "../../lib/auth";
-import { asyncHandler } from "../../middleware/async-handler";
+import { Role } from "../../generated/prisma/client.js";
+import { allow, authenticate } from "../../lib/auth.js";
+import { asyncHandler } from "../../middleware/async-handler.js";
 import {
   getUserDetailHandler,
   listUsers,
   updateUserStatusHandler,
-} from "./user.controller";
+} from "./user.controller.js";
 
 export const adminUserRouter = Router();
 

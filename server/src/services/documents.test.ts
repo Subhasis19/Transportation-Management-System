@@ -1,7 +1,7 @@
-import "../test/test-env";
+import "../test/test-env.js";
 import assert from "node:assert/strict";
 import test from "node:test";
-import { uploadGeneratedBookingDocument } from "./documents";
+import { uploadGeneratedBookingDocument } from "./documents.js";
 
 test("generated booking documents explicitly enable upsert", async () => {
   const calls: Array<{ path: string; upsert: boolean | undefined }> = [];

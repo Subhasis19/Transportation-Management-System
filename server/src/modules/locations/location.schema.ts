@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { normalizeLocationName } from "./location.rules";
+import { normalizeLocationName } from "./location.rules.js";
 
 const cityNameSchema = z.string().transform(normalizeLocationName).pipe(z.string().min(2).max(100));
 

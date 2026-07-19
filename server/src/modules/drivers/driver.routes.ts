@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { Role } from "../../generated/prisma/client";
-import { authenticate, allow } from "../../lib/auth";
-import { asyncHandler } from "../../middleware/async-handler";
+import { Role } from "../../generated/prisma/client.js";
+import { authenticate, allow } from "../../lib/auth.js";
+import { asyncHandler } from "../../middleware/async-handler.js";
 import {
     createDriverHandler,
     listDriverOptions,
     listDrivers,
     updateDriverHandler,
     updateDriverStatusHandler,
-} from "./driver.controller";
+} from "./driver.controller.js";
 
 export const adminDriverRouter = Router();
 

@@ -2,29 +2,29 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 
-import { env } from "./config/env";
-import { errorHandler } from "./middleware/error-handler";
-import { notFoundHandler } from "./middleware/not-found";
-import { apiRateLimiter } from "./middleware/rate-limit";
-import { authRouter } from "./modules/auth/auth.routes";
+import { env } from "./config/env.js";
+import { errorHandler } from "./middleware/error-handler.js";
+import { notFoundHandler } from "./middleware/not-found.js";
+import { apiRateLimiter } from "./middleware/rate-limit.js";
+import { authRouter } from "./modules/auth/auth.routes.js";
 import {
   locationRouter,
   adminLocationRouter,
-} from "./modules/locations/location.routes";
+} from "./modules/locations/location.routes.js";
 import {
   quoteRouter,
   adminRouteRouter,
-} from "./modules/routes/route.routes";
-import { adminVehicleRouter } from "./modules/vehicles/vehicle.routes";
-import { adminPricingRouter } from "./modules/pricing/pricing.routes";
-import { adminDriverRouter } from "./modules/drivers/driver.routes";
-import { adminUserRouter } from "./modules/users/user.routes";
-import { adminDashboardRouter } from "./modules/dashboard/dashboard.routes";
+} from "./modules/routes/route.routes.js";
+import { adminVehicleRouter } from "./modules/vehicles/vehicle.routes.js";
+import { adminPricingRouter } from "./modules/pricing/pricing.routes.js";
+import { adminDriverRouter } from "./modules/drivers/driver.routes.js";
+import { adminUserRouter } from "./modules/users/user.routes.js";
+import { adminDashboardRouter } from "./modules/dashboard/dashboard.routes.js";
 import {
   bookingRouter,
   adminBookingRouter,
   driverBookingRouter,
-} from "./modules/bookings/booking.routes";
+} from "./modules/bookings/booking.routes.js";
 
 const app = express();
 app.disable("x-powered-by");

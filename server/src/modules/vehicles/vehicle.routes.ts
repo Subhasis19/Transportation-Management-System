@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { Role } from "../../generated/prisma/client";
-import { authenticate, allow } from "../../lib/auth";
-import { asyncHandler } from "../../middleware/async-handler";
+import { Role } from "../../generated/prisma/client.js";
+import { authenticate, allow } from "../../lib/auth.js";
+import { asyncHandler } from "../../middleware/async-handler.js";
 import {
     createVehicleHandler,
     listVehicles,
     updateVehicleHandler,
     updateVehicleStatusHandler,
-} from "./vehicle.controller";
+} from "./vehicle.controller.js";
 
 export const adminVehicleRouter = Router();
 

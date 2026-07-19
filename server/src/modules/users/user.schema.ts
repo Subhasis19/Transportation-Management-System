@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { uuidSchema } from "../../common/schemas/common.schema";
+import { uuidSchema } from "../../common/schemas/common.schema.js";
 
 export const adminUserQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),

@@ -6,14 +6,14 @@ import {
     routeParamsSchema,
     updateRouteSchema,
     updateRouteStatusSchema,
-} from "./route.schema";
+} from "./route.schema.js";
 import {
     createRoute,
     getAdminRoutes,
     getQuote,
     updateRoute,
     updateRouteStatus,
-} from "./route.service";
+} from "./route.service.js";
 
 export async function getQuoteHandler(req: Request, res: Response) {
     const input = quoteQuerySchema.parse(req.query);

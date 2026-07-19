@@ -1,17 +1,17 @@
 import { Router } from "express";
-import { asyncHandler } from "../../middleware/async-handler";
-import { authenticate } from "../../lib/auth";
+import { asyncHandler } from "../../middleware/async-handler.js";
+import { authenticate } from "../../lib/auth.js";
 import {
     loginRateLimiter,
     refreshRateLimiter,
     registerRateLimiter,
-} from "../../middleware/rate-limit";
+} from "../../middleware/rate-limit.js";
 import {
     login,
     logout,
     refresh,
     register,
-} from "./auth.controller";
+} from "./auth.controller.js";
 
 const router = Router();
 

@@ -1,4 +1,4 @@
-import { BookingStatus, type Prisma } from "../../generated/prisma/client";
+import { BookingStatus, type Prisma } from "../../generated/prisma/client.js";
 
 export const activeVehicleBookingStatuses = [
     BookingStatus.PENDING,

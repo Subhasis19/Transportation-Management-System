@@ -2,10 +2,10 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "node:crypto";
 import type { NextFunction, Request, Response } from "express";
-import { env } from "../config/env";
-import { Role } from "../generated/prisma/client";
-import { prisma } from "./prisma";
-import { AppError } from "../common/errors/app-error";
+import { env } from "../config/env.js";
+import { Role } from "../generated/prisma/client.js";
+import { prisma } from "./prisma.js";
+import { AppError } from "../common/errors/app-error.js";
 import { z } from "zod";
 
 const accessSecret = env.JWT_ACCESS_SECRET;

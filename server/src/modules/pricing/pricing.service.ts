@@ -1,8 +1,8 @@
-import { AppError } from "../../common/errors/app-error";
-import { Prisma } from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
-import { vehicleTypes } from "../vehicles/vehicle.schema";
-import type { UpdatePricingInput } from "./pricing.schema";
+import { AppError } from "../../common/errors/app-error.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { vehicleTypes } from "../vehicles/vehicle.schema.js";
+import type { UpdatePricingInput } from "./pricing.schema.js";
 
 const adminRateCardSelect = {
     id: true,

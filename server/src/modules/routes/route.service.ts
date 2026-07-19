@@ -1,19 +1,19 @@
-import { AppError } from "../../common/errors/app-error";
-import { Prisma, VehicleStatus } from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
-import { calculateFare } from "../../services/fare";
+import { AppError } from "../../common/errors/app-error.js";
+import { Prisma, VehicleStatus } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { calculateFare } from "../../services/fare.js";
 import {
     buildAdminRouteWhere,
     buildUsableRouteWhere,
     toPublicQuoteRoute,
-} from "./route.rules";
+} from "./route.rules.js";
 import type {
     AdminRouteQuery,
     CreateRouteInput,
     QuoteQueryInput,
     UpdateRouteInput,
     UpdateRouteStatusInput,
-} from "./route.schema";
+} from "./route.schema.js";
 
 export async function getQuote(input: QuoteQueryInput) {
     if (input.fromLocationId === input.toLocationId) {

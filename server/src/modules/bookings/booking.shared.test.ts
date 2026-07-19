@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isVehicleCompliant, toBookingResponse } from "./booking.shared";
+import { isVehicleCompliant, toBookingResponse } from "./booking.shared.js";
 
 test("booking responses do not expose private document storage paths", () => {
   const response = toBookingResponse({

@@ -1,16 +1,16 @@
-import { AppError } from "../../common/errors/app-error";
-import { BookingStatus, Prisma, Role } from "../../generated/prisma/client";
-import { setUserAccessRevoked } from "../../lib/auth";
-import { prisma } from "../../lib/prisma";
+import { AppError } from "../../common/errors/app-error.js";
+import { BookingStatus, Prisma, Role } from "../../generated/prisma/client.js";
+import { setUserAccessRevoked } from "../../lib/auth.js";
+import { prisma } from "../../lib/prisma.js";
 import {
   activeDriverAssignmentStatuses,
   isDriverLicenseValid,
-} from "../drivers/driver.rules";
-import type { AdminUserQuery, UpdateUserStatusInput } from "./user.schema";
+} from "../drivers/driver.rules.js";
+import type { AdminUserQuery, UpdateUserStatusInput } from "./user.schema.js";
 import {
   getUserActivityStatus,
   getUserActivityWhere,
-} from "./user-activity";
+} from "./user-activity.js";
 
 const activeAssignmentStatusFilter: BookingStatus[] = [
   ...activeDriverAssignmentStatuses,

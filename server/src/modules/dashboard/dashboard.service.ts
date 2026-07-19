@@ -2,14 +2,14 @@ import {
   BookingStatus,
   Role,
   VehicleStatus,
-} from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
+} from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
 import {
   activeDriverAssignmentStatuses,
   getDriverLicenseStatus,
-} from "../drivers/driver.rules";
-import { getActiveUserCutoff } from "../users/user-activity";
-import { getVehicleDocumentStatus } from "../vehicles/vehicle.rules";
+} from "../drivers/driver.rules.js";
+import { getActiveUserCutoff } from "../users/user-activity.js";
+import { getVehicleDocumentStatus } from "../vehicles/vehicle.rules.js";
 
 const vehicleCount = (
   rows: Array<{ status: VehicleStatus; _count: number }>,

@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { uuidSchema } from "../../common/schemas/common.schema";
-import { isDriverLicenseValid } from "./driver.rules";
+import { uuidSchema } from "../../common/schemas/common.schema.js";
+import { isDriverLicenseValid } from "./driver.rules.js";
 
 const driverNameSchema = z.string().trim().min(2).max(100);
 const driverEmailSchema = z.string().email().max(150).transform((value) => value.toLowerCase());

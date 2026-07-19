@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { Role } from "../../generated/prisma/client";
-import { allow, authenticate } from "../../lib/auth";
-import { asyncHandler } from "../../middleware/async-handler";
+import { Role } from "../../generated/prisma/client.js";
+import { allow, authenticate } from "../../lib/auth.js";
+import { asyncHandler } from "../../middleware/async-handler.js";
 import {
     cancelBookingHandler,
     closeBookingHandler,
@@ -13,7 +13,7 @@ import {
     getAdminBookingDetailHandler,
     listAdminBookings,
     listMyBookings,
-} from "./booking.controller";
+} from "./booking.controller.js";
 
 export const bookingRouter = Router();
 export const adminBookingRouter = Router();

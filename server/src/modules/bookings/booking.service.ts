@@ -1,16 +1,16 @@
-import { AppError } from "../../common/errors/app-error";
-import { Role, VehicleStatus } from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
-import { signedDocumentUrl } from "../../lib/storage";
-import { calculateFare } from "../../services/fare";
-import type { CreateBookingInput } from "./booking.schema";
+import { AppError } from "../../common/errors/app-error.js";
+import { Role, VehicleStatus } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import { signedDocumentUrl } from "../../lib/storage.js";
+import { calculateFare } from "../../services/fare.js";
+import type { CreateBookingInput } from "./booking.schema.js";
 import {
     bookingInclude,
     isVehicleCompliant,
     toBookingResponse,
-} from "./booking.shared";
-import { isWeightWithinVehicleCapacity } from "./booking.rules";
-import { buildUsableRouteWhere } from "../routes/route.rules";
+} from "./booking.shared.js";
+import { isWeightWithinVehicleCapacity } from "./booking.rules.js";
+import { buildUsableRouteWhere } from "../routes/route.rules.js";
 
 export async function createBooking(customerId: string, input: CreateBookingInput) {
     return prisma.$transaction(async (tx) => {

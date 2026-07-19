@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { areLocationNamesEquivalent, buildAdminLocationWhere, normalizeLocationName } from "./location.rules";
+import { areLocationNamesEquivalent, buildAdminLocationWhere, normalizeLocationName } from "./location.rules.js";
 
 test("normalizes location names without changing casing", () => {
   assert.equal(normalizeLocationName("  New   Delhi  "), "New Delhi");

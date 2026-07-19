@@ -1,9 +1,9 @@
-import "./test/test-env";
+import "./test/test-env.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import request from "supertest";
 
-const { default: app } = await import("./app");
+const { default: app } = await import("./app.js");
 
 test("GET /health returns the current success response", async () => {
   const response = await request(app).get("/health");

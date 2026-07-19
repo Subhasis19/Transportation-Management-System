@@ -5,7 +5,7 @@ import {
   buildUsableRouteWhere,
   hasAtMostTwoDecimalPlaces,
   toPublicQuoteRoute,
-} from "./route.rules";
+} from "./route.rules.js";
 
 test("usable route filter requires active routes and endpoint locations", () => {
   const from = "origin-id";

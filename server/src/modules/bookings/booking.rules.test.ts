@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   canAssignDriverToActiveTrip,
   isWeightWithinVehicleCapacity,
-} from "./booking.rules";
+} from "./booking.rules.js";
 
 test("cargo weight must not exceed vehicle capacity", () => {
   assert.equal(isWeightWithinVehicleCapacity(1000, 1000), true);

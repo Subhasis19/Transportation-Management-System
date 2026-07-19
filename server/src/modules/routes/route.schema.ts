@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { uuidSchema } from "../../common/schemas/common.schema";
-import { hasAtMostTwoDecimalPlaces } from "./route.rules";
+import { uuidSchema } from "../../common/schemas/common.schema.js";
+import { hasAtMostTwoDecimalPlaces } from "./route.rules.js";
 
 const normalizeRouteNumericValue = (value: unknown) => {
   if (typeof value === "number") {

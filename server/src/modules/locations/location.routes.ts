@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { authenticate, allow } from "../../lib/auth";
-import { asyncHandler } from "../../middleware/async-handler";
-import { Role } from "../../generated/prisma/client";
+import { authenticate, allow } from "../../lib/auth.js";
+import { asyncHandler } from "../../middleware/async-handler.js";
+import { Role } from "../../generated/prisma/client.js";
 import {
     createLocationHandler,
     listAdminLocations,
     listLocations,
     updateLocationHandler,
     updateLocationStatusHandler,
-} from "./location.controller";
+} from "./location.controller.js";
 
 export const locationRouter = Router();
 export const adminLocationRouter = Router();

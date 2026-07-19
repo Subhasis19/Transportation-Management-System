@@ -1,8 +1,8 @@
-import { AppError } from "../../common/errors/app-error";
-import { Prisma } from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
-import type { AdminLocationQuery, CreateLocationInput, UpdateLocationInput, UpdateLocationStatusInput } from "./location.schema";
-import { buildAdminLocationWhere } from "./location.rules";
+import { AppError } from "../../common/errors/app-error.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import type { AdminLocationQuery, CreateLocationInput, UpdateLocationInput, UpdateLocationStatusInput } from "./location.schema.js";
+import { buildAdminLocationWhere } from "./location.rules.js";
 
 const adminLocationSelect = {
   id: true,

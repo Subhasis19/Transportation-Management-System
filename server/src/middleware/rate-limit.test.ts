@@ -1,4 +1,4 @@
-import "../test/test-env";
+import "../test/test-env.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import express from "express";
@@ -8,7 +8,7 @@ import {
   loginRateLimiter,
   refreshRateLimiter,
   registerRateLimiter,
-} from "./rate-limit";
+} from "./rate-limit.js";
 
 const limitMessage = { message: "Too many requests, please try again later" };
 

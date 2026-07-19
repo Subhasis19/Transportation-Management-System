@@ -1,10 +1,10 @@
-import "../../test/test-env";
+import "../../test/test-env.js";
 import assert from "node:assert/strict";
 import test from "node:test";
 import request from "supertest";
-import app from "../../app";
-import { signAccessToken } from "../../lib/auth";
-import { Role } from "../../generated/prisma/client";
+import app from "../../app.js";
+import { signAccessToken } from "../../lib/auth.js";
+import { Role } from "../../generated/prisma/client.js";
 
 const id = "b3fda17e-38c8-4e5f-93c8-a5de06dd4f73";
 const paths = ["/admin/locations", "/admin/locations", `/admin/locations/${id}`, `/admin/locations/${id}/status`];

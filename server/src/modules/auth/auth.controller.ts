@@ -1,16 +1,16 @@
 import type { Response } from "express";
-import type { AuthRequest } from "../../lib/auth";
+import type { AuthRequest } from "../../lib/auth.js";
 import {
     loginSchema,
     refreshTokenSchema,
     registerSchema,
-} from "./auth.schema";
+} from "./auth.schema.js";
 import {
     loginUser,
     logoutUser,
     refreshAuthentication,
     registerUser,
-} from "./auth.service";
+} from "./auth.service.js";
 
 export async function register(req: AuthRequest, res: Response) {
     const input = registerSchema.parse(req.body);

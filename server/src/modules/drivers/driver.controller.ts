@@ -5,14 +5,14 @@ import {
     driverIdParamsSchema,
     updateDriverSchema,
     updateDriverStatusSchema,
-} from "./driver.schema";
+} from "./driver.schema.js";
 import {
     createDriver,
     getDriverOptions,
     getDrivers,
     updateDriver,
     updateDriverStatus,
-} from "./driver.service";
+} from "./driver.service.js";
 
 export async function listDrivers(req: Request, res: Response) {
     res.json(await getDrivers(adminDriverQuerySchema.parse(req.query)));

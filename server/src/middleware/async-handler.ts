@@ -4,7 +4,7 @@ import type {
   RequestHandler,
   Response,
 } from "express";
-import type { AuthRequest } from "../lib/auth";
+import type { AuthRequest } from "../lib/auth.js";
 
 type AsyncRequestHandler = (
   req: AuthRequest,

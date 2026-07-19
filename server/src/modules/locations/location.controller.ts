@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { adminLocationQuerySchema, createLocationSchema, locationParamsSchema, updateLocationSchema, updateLocationStatusSchema } from "./location.schema";
-import { createLocation, getActiveLocations, getAdminLocations, updateLocation, updateLocationStatus } from "./location.service";
+import { adminLocationQuerySchema, createLocationSchema, locationParamsSchema, updateLocationSchema, updateLocationStatusSchema } from "./location.schema.js";
+import { createLocation, getActiveLocations, getAdminLocations, updateLocation, updateLocationStatus } from "./location.service.js";
 
 export async function listLocations(_req: Request, res: Response) {
     res.json(await getActiveLocations());

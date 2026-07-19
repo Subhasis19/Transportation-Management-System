@@ -1,13 +1,13 @@
 import bcrypt from "bcrypt";
-import { AppError } from "../../common/errors/app-error";
-import { Role } from "../../generated/prisma/client";
+import { AppError } from "../../common/errors/app-error.js";
+import { Role } from "../../generated/prisma/client.js";
 import {
     issueRefreshToken,
     rotateRefreshToken,
     signAccessToken,
-} from "../../lib/auth";
-import { prisma } from "../../lib/prisma";
-import type { LoginInput, RegisterInput, RefreshTokenInput } from "./auth.schema";
+} from "../../lib/auth.js";
+import { prisma } from "../../lib/prisma.js";
+import type { LoginInput, RegisterInput, RefreshTokenInput } from "./auth.schema.js";
 
 export async function registerUser(input: RegisterInput) {
     const { password, ...profile } = input;

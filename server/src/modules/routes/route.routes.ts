@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { Role } from "../../generated/prisma/client";
-import { authenticate, allow } from "../../lib/auth";
-import { asyncHandler } from "../../middleware/async-handler";
+import { Role } from "../../generated/prisma/client.js";
+import { authenticate, allow } from "../../lib/auth.js";
+import { asyncHandler } from "../../middleware/async-handler.js";
 import {
     createRouteHandler,
     getQuoteHandler,
     listAdminRoutes,
     updateRouteHandler,
     updateRouteStatusHandler,
-} from "./route.controller";
+} from "./route.controller.js";
 
 export const quoteRouter = Router();
 export const adminRouteRouter = Router();

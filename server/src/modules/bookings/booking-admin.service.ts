@@ -1,7 +1,7 @@
-import { AppError } from "../../common/errors/app-error";
-import { Prisma } from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
-import type { AdminBookingQuery } from "./booking.schema";
+import { AppError } from "../../common/errors/app-error.js";
+import { Prisma } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
+import type { AdminBookingQuery } from "./booking.schema.js";
 
 const adminBookingListSelect = {
   id: true, status: true, pickupAt: true, materialDescription: true, weightKg: true,

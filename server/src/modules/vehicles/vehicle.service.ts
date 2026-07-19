@@ -1,17 +1,17 @@
-import { AppError } from "../../common/errors/app-error";
-import { BookingStatus, Prisma, VehicleStatus } from "../../generated/prisma/client";
-import { prisma } from "../../lib/prisma";
+import { AppError } from "../../common/errors/app-error.js";
+import { BookingStatus, Prisma, VehicleStatus } from "../../generated/prisma/client.js";
+import { prisma } from "../../lib/prisma.js";
 import type {
     AdminVehicleQuery,
     CreateVehicleInput,
     UpdateVehicleInput,
     UpdateVehicleStatusInput,
-} from "./vehicle.schema";
+} from "./vehicle.schema.js";
 import {
     activeVehicleBookingStatuses,
     getDocumentStatusWhere,
     getVehicleDocumentStatus,
-} from "./vehicle.rules";
+} from "./vehicle.rules.js";
 
 const activeBookingStatusFilter: BookingStatus[] = [
     ...activeVehicleBookingStatuses,

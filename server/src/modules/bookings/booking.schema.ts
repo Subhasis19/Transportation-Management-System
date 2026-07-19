@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { positiveMoneySchema, uuidSchema } from "../../common/schemas/common.schema";
+import { positiveMoneySchema, uuidSchema } from "../../common/schemas/common.schema.js";
 
 export const createBookingSchema = z.object({
     vehicleId: uuidSchema,

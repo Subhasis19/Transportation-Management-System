@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { Role } from "../../generated/prisma/client";
-import { authenticate, allow } from "../../lib/auth";
-import { asyncHandler } from "../../middleware/async-handler";
-import { listRateCards, updateRateCardHandler } from "./pricing.controller";
+import { Role } from "../../generated/prisma/client.js";
+import { authenticate, allow } from "../../lib/auth.js";
+import { asyncHandler } from "../../middleware/async-handler.js";
+import { listRateCards, updateRateCardHandler } from "./pricing.controller.js";
 
 export const adminPricingRouter = Router();
 

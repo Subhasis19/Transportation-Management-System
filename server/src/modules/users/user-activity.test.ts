@@ -4,7 +4,7 @@ import {
   ACTIVE_USER_WINDOW_DAYS,
   getActiveUserCutoff,
   isRecentlyActive,
-} from "./user-activity";
+} from "./user-activity.js";
 
 const now = new Date("2026-07-17T12:00:00.000Z");
 const millisecondsPerDay = 24 * 60 * 60 * 1000;

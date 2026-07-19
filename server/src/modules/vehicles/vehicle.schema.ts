@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { uuidSchema } from "../../common/schemas/common.schema";
+import { uuidSchema } from "../../common/schemas/common.schema.js";
 
 export const vehicleTypes = [
     "MINI_TRUCK",
