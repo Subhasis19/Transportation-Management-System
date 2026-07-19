@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 
 import { env } from "./config/env.js";
+import { configureTrustProxy } from "./config/proxy.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { notFoundHandler } from "./middleware/not-found.js";
 import { apiRateLimiter } from "./middleware/rate-limit.js";
@@ -28,7 +29,7 @@ import {
 
 const app = express();
 app.disable("x-powered-by");
-if (env.TRUST_PROXY) app.set("trust proxy", 1);
+configureTrustProxy(app, env.NODE_ENV, env.TRUST_PROXY);
 app.use(helmet());
 app.use(
   cors({

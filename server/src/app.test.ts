@@ -5,13 +5,13 @@ import request from "supertest";
 
 const { default: app } = await import("./app.js");
 
-test("GET /health returns the current success response", async () => {
-  const response = await request(app).get("/health");
+test("GET /healthz returns the current health response", async () => {
+  const response = await request(app).get("/healthz");
 
   assert.equal(response.status, 200);
   assert.deepEqual(response.body, {
-    success: true,
-    message: "TruckLine API is running",
+    status: "ok",
+    service: "transportation-management-system-api",
   });
 });
 
@@ -44,13 +44,13 @@ test("a protected endpoint rejects a malformed bearer token", async () => {
 });
 
 test("responses include Helmet security headers", async () => {
-  const response = await request(app).get("/health");
+  const response = await request(app).get("/healthz");
 
   assert.equal(response.headers["x-content-type-options"], "nosniff");
 });
 
 test("responses do not disclose the Express implementation header", async () => {
-  const response = await request(app).get("/health");
+  const response = await request(app).get("/healthz");
 
   assert.equal(response.headers["x-powered-by"], undefined);
 });
@@ -66,7 +66,7 @@ test("oversized JSON requests are rejected", async () => {
 
 test("the configured frontend origin receives the CORS header", async () => {
   const response = await request(app)
-    .get("/health")
+    .get("/healthz")
     .set("Origin", "http://frontend.test.local");
 
   assert.equal(
@@ -77,7 +77,7 @@ test("the configured frontend origin receives the CORS header", async () => {
 
 test("an unapproved browser origin is not reflected by CORS", async () => {
   const response = await request(app)
-    .get("/health")
+    .get("/healthz")
     .set("Origin", "https://unapproved.example");
 
   assert.equal(response.headers["access-control-allow-origin"], undefined);
