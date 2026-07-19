@@ -56,8 +56,11 @@ app.use("/bookings", bookingRouter);
 app.use("/admin/bookings", adminBookingRouter);
 app.use("/driver/bookings", driverBookingRouter);
 
-app.get("/health", (_req, res) =>
-  res.json({ success: true, message: "TruckLine API is running" }),
+app.get("/healthz", (_req, res) =>
+  res.status(200).json({
+    status: "ok",
+    service: "transportation-management-system-api",
+  })
 );
 
 app.use(notFoundHandler);
