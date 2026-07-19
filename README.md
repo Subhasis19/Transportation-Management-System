@@ -48,9 +48,9 @@ Open `http://localhost:5173`.
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Administrator | `admin@fleetflow.demo` | `Demo@123` |
-| Driver | `driver@fleetflow.demo` | `Demo@123` |
-| Customer | `customer@fleetflow.demo` | `Demo@123` |
+| Administrator | `admin@trucklink.demo` | `Demo@123` |
+| Driver | `driver@trucklink.demo` | `Demo@123` |
+| Customer | `customer@trucklink.demo` | `Demo@123` |
 
 ## Common commands
 
