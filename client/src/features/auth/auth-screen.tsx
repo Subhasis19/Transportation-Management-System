@@ -114,6 +114,11 @@ export function AuthScreen({
                 </Button>
               </div>
             </Field>
+            <p className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs leading-5 text-muted-foreground">
+              Demo notice: The server runs on Render’s free tier and may take up
+              to 60 seconds to wake after inactivity. Please wait for the
+              current request to finish and avoid submitting repeatedly.
+            </p>
             <Button
               type="submit"
               className="w-full"
