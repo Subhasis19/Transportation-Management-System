@@ -5,7 +5,9 @@ import {
     issueRefreshToken,
     rotateRefreshToken,
     signAccessToken,
+    verifyRefreshToken,
 } from "../../lib/auth.js";
+import { findMatchingRefreshToken } from "../../lib/refresh-token-match.js";
 import { prisma } from "../../lib/prisma.js";
 import type { LoginInput, RegisterInput, RefreshTokenInput } from "./auth.schema.js";
 
@@ -69,21 +71,39 @@ export async function refreshAuthentication(input: RefreshTokenInput) {
 }
 
 export async function logoutUser(userId: string, input: RefreshTokenInput) {
-    await prisma.refreshToken.deleteMany({
-        where: { userId, expiresAt: { lte: new Date() } },
-    });
-    const tokens = await prisma.refreshToken.findMany({
-        where: { userId },
-    });
+    let payload;
+    try {
+        payload = verifyRefreshToken(input.refreshToken);
+    } catch {
+        return;
+    }
+    if (payload.sub !== userId) return;
 
-    const found = await Promise.all(
-        tokens.map(async (token) => ({
-            token,
-            matches: await bcrypt.compare(input.refreshToken, token.tokenHash),
-        })),
-    ).then((items) => items.find((item) => item.matches));
+    const now = new Date();
+    await prisma.refreshToken.deleteMany({
+        where: { userId, expiresAt: { lte: now } },
+    });
+    const found = await findMatchingRefreshToken(
+        input.refreshToken,
+        {
+            findById: () =>
+                prisma.refreshToken.findFirst({
+                    where: {
+                        id: payload.jti,
+                        userId,
+                        expiresAt: { gt: now },
+                    },
+                }),
+            findLegacy: () =>
+                prisma.refreshToken.findMany({
+                    where: { userId, expiresAt: { gt: now } },
+                    orderBy: { createdAt: "desc" },
+                }),
+        },
+        bcrypt.compare,
+    );
 
     if (found) {
-        await prisma.refreshToken.delete({ where: { id: found.token.id } });
+        await prisma.refreshToken.delete({ where: { id: found.id } });
     }
 }
