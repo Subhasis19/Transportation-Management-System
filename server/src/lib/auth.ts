@@ -7,6 +7,7 @@ import { Role } from "../generated/prisma/client.js";
 import { prisma } from "./prisma.js";
 import { AppError } from "../common/errors/app-error.js";
 import { z } from "zod";
+import { findMatchingRefreshToken } from "./refresh-token-match.js";
 
 const accessSecret = env.JWT_ACCESS_SECRET;
 const refreshSecret = env.JWT_REFRESH_SECRET;
@@ -34,77 +35,101 @@ const refreshTokenPayloadSchema = z.object({
   jti: z.string().uuid(),
 });
 
+type RefreshTokenPayload = z.infer<typeof refreshTokenPayloadSchema>;
+
 export function signAccessToken(user: AuthUser) {
   return jwt.sign(user, accessSecret, { expiresIn: "15m", algorithm: "HS256" });
 }
 
-export async function issueRefreshToken(userId: string) {
-  const raw = jwt.sign(
-    { sub: userId, jti: randomUUID() },
-    refreshSecret,
-    { expiresIn: "7d", algorithm: "HS256" },
-  );
-  await prisma.refreshToken.deleteMany({
-    where: { userId, expiresAt: { lte: new Date() } },
-  });
-  await prisma.refreshToken.create({
-    data: {
-      userId,
-      tokenHash: await bcrypt.hash(raw, 12),
-      expiresAt: new Date(Date.now() + 7 * 86400_000),
-    },
-  });
-  return raw;
+function createRefreshToken(userId: string) {
+  const id = randomUUID();
+  return {
+    id,
+    raw: jwt.sign(
+      { sub: userId, jti: id },
+      refreshSecret,
+      { expiresIn: "7d", algorithm: "HS256" },
+    ),
+  };
 }
 
-export async function rotateRefreshToken(raw: string) {
-  let payload: z.infer<typeof refreshTokenPayloadSchema>;
+export function verifyRefreshToken(raw: string): RefreshTokenPayload {
   try {
-    payload = refreshTokenPayloadSchema.parse(
+    return refreshTokenPayloadSchema.parse(
       jwt.verify(raw, refreshSecret, { algorithms: ["HS256"] }),
     );
   } catch {
     throw new AppError(401, "Invalid refresh token");
   }
+}
 
+export async function issueRefreshToken(userId: string) {
+  const token = createRefreshToken(userId);
+  await prisma.refreshToken.deleteMany({
+    where: { userId, expiresAt: { lte: new Date() } },
+  });
+  await prisma.refreshToken.create({
+    data: {
+      id: token.id,
+      userId,
+      tokenHash: await bcrypt.hash(token.raw, 12),
+      expiresAt: new Date(Date.now() + 7 * 86400_000),
+    },
+  });
+  return token.raw;
+}
+
+export async function rotateRefreshToken(raw: string) {
+  const payload = verifyRefreshToken(raw);
+  const now = new Date();
+
+  await prisma.refreshToken.deleteMany({
+    where: { userId: payload.sub, expiresAt: { lte: now } },
+  });
+  const match = await findMatchingRefreshToken(
+    raw,
+    {
+      findById: () =>
+        prisma.refreshToken.findFirst({
+          where: { id: payload.jti, userId: payload.sub, expiresAt: { gt: now } },
+          include: { user: true },
+        }),
+      findLegacy: () =>
+        prisma.refreshToken.findMany({
+          where: { userId: payload.sub, expiresAt: { gt: now } },
+          include: { user: true },
+          orderBy: { createdAt: "desc" },
+        }),
+    },
+    bcrypt.compare,
+  );
+  if (!match || !match.user.isActive)
+    throw new AppError(401, "Invalid refresh token");
+
+  const nextToken = createRefreshToken(match.userId);
+  const nextTokenHash = await bcrypt.hash(nextToken.raw, 12);
   return prisma.$transaction(async (tx) => {
-    await tx.refreshToken.deleteMany({
-      where: { userId: payload.sub, expiresAt: { lte: new Date() } },
-    });
-    const candidates = await tx.refreshToken.findMany({
-      where: { userId: payload.sub, expiresAt: { gt: new Date() } },
-      include: { user: true },
-    });
-    const match = await Promise.all(
-      candidates.map(async (token) => ({
-        token,
-        valid: await bcrypt.compare(raw, token.tokenHash),
-      })),
-    ).then((items) => items.find((item) => item.valid));
-    if (!match || !match.token.user.isActive)
-      throw new AppError(401, "Invalid refresh token");
-
     const deleted = await tx.refreshToken.deleteMany({
-      where: { id: match.token.id },
+      where: {
+        id: match.id,
+        userId: payload.sub,
+        user: { isActive: true },
+      },
     });
     if (deleted.count !== 1) throw new AppError(401, "Invalid refresh token");
 
-    const refreshToken = jwt.sign(
-      { sub: match.token.userId, jti: randomUUID() },
-      refreshSecret,
-      { expiresIn: "7d", algorithm: "HS256" },
-    );
     await tx.refreshToken.create({
       data: {
-        userId: match.token.userId,
-        tokenHash: await bcrypt.hash(refreshToken, 12),
+        id: nextToken.id,
+        userId: match.userId,
+        tokenHash: nextTokenHash,
         expiresAt: new Date(Date.now() + 7 * 86400_000),
       },
     });
-    const user = match.token.user;
+    const user = match.user;
     return {
       accessToken: signAccessToken({ id: user.id, role: user.role, email: user.email }),
-      refreshToken,
+      refreshToken: nextToken.raw,
     };
   });
 }
